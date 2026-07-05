@@ -22,7 +22,7 @@
 | 模块 | 示例 |
 |------|------|
 | auth | `auth.user.create`、`auth.role.update` |
-| project | `project.read`、`project.create`、`project.zone.manage` |
+| project | `project.read`、`project.create`、`project.zone.manage`、`project.task.manage` |
 | procurement | `procurement.request.create`、`procurement.order.confirm` |
 | warehouse | `warehouse.inbound.confirm`、`warehouse.outbound.create` |
 | material | `material.create`、`material.import`、`material.export` |

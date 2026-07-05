@@ -4,17 +4,21 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
+import { DhtmlxGanttChart } from '@/components/project/dhtmlx-gantt-chart';
 import { Button, Card, Input } from '@/components/ui/primitives';
 import {
   addProjectMember,
   createProjectMilestone,
   createProjectZone,
   getProject,
+  getProjectGantt,
   hasPermission,
   listUsers,
   ProjectDetail,
+  ProjectGanttData,
   UserItem,
 } from '@/lib/api';
+import { flattenTaskTree } from '@/lib/task-tree';
 import { useAuthStore } from '@/stores/auth-store';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -29,7 +33,9 @@ const STATUS_LABEL: Record<string, string> = {
 export default function ProjectDetailPage() {
   const params = useParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
   const [project, setProject] = useState<ProjectDetail | null>(null);
+  const [gantt, setGantt] = useState<ProjectGanttData | null>(null);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,8 +51,12 @@ export default function ProjectDetailPage() {
   async function load() {
     setLoading(true);
     try {
-      const res = await getProject(params.id);
-      setProject(res.data);
+      const [projectRes, ganttRes] = await Promise.all([
+        getProject(params.id),
+        getProjectGantt(params.id),
+      ]);
+      setProject(projectRes.data);
+      setGantt(ganttRes.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载失败');
     } finally {
@@ -55,6 +65,7 @@ export default function ProjectDetailPage() {
   }
 
   useEffect(() => {
+    if (!hasHydrated) return;
     if (!canRead) {
       setLoading(false);
       return;
@@ -62,8 +73,12 @@ export default function ProjectDetailPage() {
     void (async () => {
       setLoading(true);
       try {
-        const res = await getProject(params.id);
-        setProject(res.data);
+        const [projectRes, ganttRes] = await Promise.all([
+          getProject(params.id),
+          getProjectGantt(params.id),
+        ]);
+        setProject(projectRes.data);
+        setGantt(ganttRes.data);
       } catch (err) {
         setError(err instanceof Error ? err.message : '加载失败');
       } finally {
@@ -75,7 +90,7 @@ export default function ProjectDetailPage() {
         .then((res) => setUsers(res.data.list))
         .catch(() => undefined);
     }
-  }, [canRead, canManageMember, params.id]);
+  }, [hasHydrated, canRead, canManageMember, params.id]);
 
   async function handleAddZone(e: React.FormEvent) {
     e.preventDefault();
@@ -121,7 +136,7 @@ export default function ProjectDetailPage() {
     );
   }
 
-  if (loading) {
+  if (!hasHydrated || loading) {
     return (
       <AppShell>
         <Card className="p-6">加载中...</Card>
@@ -149,6 +164,11 @@ export default function ProjectDetailPage() {
             {project.code}
           </span>
         </h1>
+        <div className="mt-3">
+          <Link href={`/projects/${params.id}/schedule`}>
+            <Button variant="ghost">施工计划与甘特图 →</Button>
+          </Link>
+        </div>
       </div>
 
       {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
@@ -173,6 +193,36 @@ export default function ProjectDetailPage() {
           <p className="text-lg font-medium">—</p>
         </Card>
       </div>
+
+      <Card className="mb-6 p-6">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">进度总览</h2>
+            {gantt && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {gantt.overview.totalTasks} 项施工内容 · 平均进度{' '}
+                {gantt.overview.avgProgress}% · 已完成{' '}
+                {gantt.overview.completedTasks} 项
+              </p>
+            )}
+          </div>
+          <Link href={`/projects/${params.id}/schedule`}>
+            <Button variant="ghost">管理施工内容</Button>
+          </Link>
+        </div>
+        {gantt && (
+          <DhtmlxGanttChart
+            tasks={flattenTaskTree(gantt.tasks)
+              .filter((t) => t.showInGantt !== false)
+              .map((t) => ({
+              ...t,
+              assignee: t.assignee ?? undefined,
+            }))}
+            compact
+            readOnly
+          />
+        )}
+      </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-6">

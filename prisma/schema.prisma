@@ -42,6 +42,12 @@ enum MilestoneStatus {
   overdue
 }
 
+enum TaskStatus {
+  pending
+  in_progress
+  completed
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -59,6 +65,7 @@ model User {
   auditLogs       AuditLog[]
   managedProjects Project[]       @relation("ProjectManager")
   projectMembers  ProjectMember[]
+  assignedTasks   ProjectTask[]   @relation("TaskAssignee")
 
   @@map("users")
 }
@@ -174,6 +181,7 @@ model Project {
   zones      ProjectZone[]
   members    ProjectMember[]
   milestones ProjectMilestone[]
+  tasks      ProjectTask[]
 
   @@index([status])
   @@index([managerId])
@@ -191,6 +199,7 @@ model ProjectZone {
   deletedAt   DateTime? @map("deleted_at")
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   ProjectTask[]
 
   @@index([projectId])
   @@map("project_zones")
@@ -225,4 +234,43 @@ model ProjectMilestone {
 
   @@index([projectId])
   @@map("project_milestones")
+}
+
+model ProjectTask {
+  id        String     @id @default(uuid())
+  projectId String     @map("project_id")
+  code      String?
+  name      String
+  nameFr    String?    @map("name_fr")
+  zoneId    String?    @map("zone_id")
+  parentId  String?    @map("parent_id")
+  startDate     DateTime?  @map("start_date") @db.Date
+  endDate       DateTime?  @map("end_date") @db.Date
+  laborCount    Int?       @map("labor_count")
+  durationDays  Decimal?   @map("duration_days") @db.Decimal(10, 2)
+  prerequisites String?
+  predecessorId String?    @map("predecessor_id")
+  assigneeId    String?    @map("assignee_id")
+  showInGantt   Boolean    @default(true) @map("show_in_gantt")
+  progress      Int        @default(0)
+  status    TaskStatus @default(pending)
+  sortOrder Int        @default(0) @map("sort_order")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  deletedAt DateTime?  @map("deleted_at")
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  zone         ProjectZone?  @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  parent       ProjectTask?  @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children     ProjectTask[] @relation("TaskHierarchy")
+  predecessor  ProjectTask?  @relation("TaskPredecessor", fields: [predecessorId], references: [id], onDelete: SetNull)
+  successors   ProjectTask[] @relation("TaskPredecessor")
+  assignee     User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([zoneId])
+  @@index([parentId])
+  @@index([predecessorId])
+  @@index([assigneeId])
+  @@map("project_tasks")
 }

@@ -87,6 +87,9 @@
 |------|-----------|------|
 | 2026-07-05 | init_auth | users, roles, permissions, audit_logs, settings |
 | 2026-07-05 | init_project | projects, project_zones, project_members, project_milestones |
+| 2026-07-05 | project_tasks | 施工内容基础表 |
+| 2026-07-05 | project_task_fields | labor_count, duration_days, prerequisites, predecessor_id, assignee_id |
+| 2026-07-05 | project_task_gantt_flag | show_in_gantt |
 
 ---
 
@@ -114,6 +117,7 @@
 | `project_zones` | 施工区域 |
 | `project_members` | 项目成员 |
 | `project_milestones` | 里程碑 |
+| `project_tasks` | 施工内容（WBS、甘特图、前置依赖） |
 
 ### procurement — [procurement.md](./modules/procurement.md)
 

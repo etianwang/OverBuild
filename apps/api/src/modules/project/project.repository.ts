@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { MilestoneStatus, Prisma } from '@prisma/client';
+import { MilestoneStatus, Prisma, TaskStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const projectInclude = {
@@ -7,9 +7,16 @@ const projectInclude = {
     select: { id: true, name: true, username: true },
   },
   _count: {
-    select: { zones: true, members: true, milestones: true },
+    select: { zones: true, members: true, milestones: true, tasks: true },
   },
 } satisfies Prisma.ProjectInclude;
+
+const taskInclude = {
+  zone: { select: { id: true, name: true } },
+  assignee: { select: { id: true, name: true, username: true } },
+  predecessor: { select: { id: true, name: true, code: true } },
+  parent: { select: { id: true, name: true } },
+} satisfies Prisma.ProjectTaskInclude;
 
 @Injectable()
 export class ProjectRepository {
@@ -198,6 +205,118 @@ export class ProjectRepository {
   userExists(userId: string) {
     return this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null, status: 'active' },
+    });
+  }
+
+  findTasks(projectId: string) {
+    return this.prisma.projectTask.findMany({
+      where: { projectId, deletedAt: null },
+      include: taskInclude,
+      orderBy: [{ sortOrder: 'asc' }, { startDate: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  findTask(projectId: string, taskId: string) {
+    return this.prisma.projectTask.findFirst({
+      where: { id: taskId, projectId, deletedAt: null },
+      include: taskInclude,
+    });
+  }
+
+  isProjectAssignee(projectId: string, userId: string) {
+    return this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        deletedAt: null,
+        OR: [
+          { managerId: userId },
+          { members: { some: { userId } } },
+        ],
+      },
+      select: { id: true },
+    });
+  }
+
+  createTask(
+    projectId: string,
+    data: {
+      code?: string | null;
+      name: string;
+      nameFr?: string | null;
+      zoneId?: string | null;
+      parentId?: string | null;
+      startDate?: Date | null;
+      endDate?: Date | null;
+      laborCount?: number | null;
+      durationDays?: number | null;
+      prerequisites?: string | null;
+      predecessorId?: string | null;
+      assigneeId?: string | null;
+      showInGantt?: boolean;
+      progress?: number;
+      status?: TaskStatus;
+      sortOrder?: number;
+    },
+  ) {
+    return this.prisma.projectTask.create({
+      data: {
+        projectId,
+        code: data.code,
+        name: data.name,
+        nameFr: data.nameFr,
+        zoneId: data.zoneId,
+        parentId: data.parentId,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        laborCount: data.laborCount,
+        durationDays: data.durationDays,
+        prerequisites: data.prerequisites,
+        predecessorId: data.predecessorId,
+        assigneeId: data.assigneeId,
+        showInGantt: data.showInGantt ?? true,
+        progress: data.progress ?? 0,
+        status: data.status ?? TaskStatus.pending,
+        sortOrder: data.sortOrder ?? 0,
+      },
+      include: taskInclude,
+    });
+  }
+
+  updateTask(taskId: string, data: Prisma.ProjectTaskUpdateInput) {
+    return this.prisma.projectTask.update({
+      where: { id: taskId },
+      data,
+      include: taskInclude,
+    });
+  }
+
+  softDeleteTask(taskId: string) {
+    return this.prisma.projectTask.update({
+      where: { id: taskId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  softDeleteAllTasks(projectId: string) {
+    return this.prisma.projectTask.updateMany({
+      where: { projectId, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  findZoneByName(projectId: string, name: string) {
+    return this.prisma.projectZone.findFirst({
+      where: {
+        projectId,
+        name: { equals: name, mode: 'insensitive' },
+        deletedAt: null,
+      },
+    });
+  }
+
+  findTaskByCode(projectId: string, code: string) {
+    return this.prisma.projectTask.findFirst({
+      where: { projectId, code, deletedAt: null },
     });
   }
 }

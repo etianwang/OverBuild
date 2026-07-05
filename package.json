@@ -13,6 +13,7 @@
     "test:e2e": "npm run test:e2e -w @overbuild/api",
     "dev:api": "npm run dev -w @overbuild/api",
     "dev:web": "npm run dev -w @overbuild/web",
+    "dev:web:clean": "node -e \"require('fs').rmSync('apps/web/.next',{recursive:true,force:true})\" && npm run dev:web",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",

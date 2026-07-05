@@ -22,9 +22,13 @@ import {
   AddMemberDto,
   CreateMilestoneDto,
   CreateProjectDto,
+  CreateTaskDto,
   CreateZoneDto,
+  ImportTasksDto,
+  ReorderTasksDto,
   UpdateMilestoneDto,
   UpdateProjectDto,
+  UpdateTaskDto,
   UpdateZoneDto,
 } from './dto/project.dto';
 import { ProjectService } from './project.service';
@@ -244,5 +248,108 @@ export class ProjectController {
     @Body() dto: UpdateMilestoneDto,
   ) {
     return this.projectService.updateMilestone(req.user, id, milestoneId, dto);
+  }
+
+  @Get(':id/gantt')
+  @Permissions('project.read')
+  @ApiOperation({ summary: '进度甘特图总览' })
+  gantt(@Req() req: Request & { user: AuthUser }, @Param('id') id: string) {
+    return this.projectService.getGantt(req.user, id);
+  }
+
+  @Get(':id/tasks')
+  @Permissions('project.read')
+  @ApiOperation({ summary: '施工内容列表' })
+  listTasks(
+    @Req() req: Request & { user: AuthUser },
+    @Param('id') id: string,
+  ) {
+    return this.projectService.listTasks(req.user, id);
+  }
+
+  @Get(':id/tasks/import-template')
+  @Permissions('project.read')
+  @ApiOperation({ summary: '施工内容 CSV 导入模板' })
+  async taskImportTemplate(@Res() res: Response) {
+    const { filename, content } = this.projectService.getTaskImportTemplate();
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(`\ufeff${content}`);
+  }
+
+  @Get(':id/tasks/export')
+  @Permissions('project.read')
+  @ApiOperation({ summary: '导出施工内容 CSV' })
+  async exportTasks(
+    @Req() req: Request & { user: AuthUser },
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { filename, content } = await this.projectService.exportTasks(
+      req.user,
+      id,
+    );
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${encodeURIComponent(filename)}"`,
+    );
+    res.send(`\ufeff${content}`);
+  }
+
+  @Post(':id/tasks/import')
+  @Permissions('project.task.manage')
+  @ApiOperation({ summary: 'CSV 导入施工内容' })
+  importTasks(
+    @Req() req: Request & { user: AuthUser },
+    @Param('id') id: string,
+    @Body() dto: ImportTasksDto,
+  ) {
+    return this.projectService.importTasks(req.user, id, dto);
+  }
+
+  @Put(':id/tasks/reorder')
+  @Permissions('project.task.manage')
+  @ApiOperation({ summary: '调整施工内容顺序' })
+  reorderTasks(
+    @Req() req: Request & { user: AuthUser },
+    @Param('id') id: string,
+    @Body() dto: ReorderTasksDto,
+  ) {
+    return this.projectService.reorderTasks(req.user, id, dto);
+  }
+
+  @Post(':id/tasks')
+  @Permissions('project.task.manage')
+  @ApiOperation({ summary: '新增施工内容' })
+  createTask(
+    @Req() req: Request & { user: AuthUser },
+    @Param('id') id: string,
+    @Body() dto: CreateTaskDto,
+  ) {
+    return this.projectService.createTask(req.user, id, dto);
+  }
+
+  @Put(':id/tasks/:taskId')
+  @Permissions('project.task.manage')
+  @ApiOperation({ summary: '编辑施工内容' })
+  updateTask(
+    @Req() req: Request & { user: AuthUser },
+    @Param('id') id: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: UpdateTaskDto,
+  ) {
+    return this.projectService.updateTask(req.user, id, taskId, dto);
+  }
+
+  @Delete(':id/tasks/:taskId')
+  @Permissions('project.task.manage')
+  @ApiOperation({ summary: '删除施工内容' })
+  removeTask(
+    @Req() req: Request & { user: AuthUser },
+    @Param('id') id: string,
+    @Param('taskId') taskId: string,
+  ) {
+    return this.projectService.removeTask(req.user, id, taskId);
   }
 }

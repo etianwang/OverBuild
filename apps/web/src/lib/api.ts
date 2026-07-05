@@ -1,4 +1,5 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+const API_TIMEOUT_MS = 15_000;
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -13,20 +14,36 @@ export async function apiFetch<T>(
   const token =
     typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
-  const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
-  const json = (await res.json()) as ApiResponse<T>;
-  if (!res.ok || !json.success) {
-    throw new Error(json.message || '请求失败');
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+
+    const json = (await res.json()) as ApiResponse<T>;
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || '请求失败');
+    }
+    return json;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new Error('请求超时，请确认 API 服务已启动（端口 3001）');
+    }
+    if (err instanceof TypeError) {
+      throw new Error('无法连接 API，请确认服务已启动（npm run dev:api）');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return json;
 }
 
 export interface AuthUser {
@@ -280,6 +297,164 @@ export async function createProjectMilestone(
     method: 'POST',
     body: JSON.stringify(data),
   });
+}
+
+export interface ProjectTaskItem {
+  id: string;
+  code?: string | null;
+  name: string;
+  nameFr?: string | null;
+  zoneId?: string | null;
+  parentId?: string | null;
+  predecessorId?: string | null;
+  assigneeId?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  laborCount?: number | null;
+  durationDays?: number | string | null;
+  prerequisites?: string | null;
+  showInGantt?: boolean;
+  progress: number;
+  status: string;
+  sortOrder: number;
+  zone?: { id: string; name: string } | null;
+  assignee?: { id: string; name: string; username?: string } | null;
+  predecessor?: { id: string; name: string; code?: string | null } | null;
+  parent?: { id: string; name: string } | null;
+}
+
+export interface ProjectGanttOverview {
+  totalTasks: number;
+  completedTasks: number;
+  scheduledTasks: number;
+  avgProgress: number;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export interface ProjectGanttData {
+  tasks: ProjectTaskItem[];
+  overview: ProjectGanttOverview;
+}
+
+export async function getProjectGantt(projectId: string) {
+  return apiFetch<ProjectGanttData>(`/projects/${projectId}/gantt`);
+}
+
+export async function listProjectTasks(projectId: string) {
+  return apiFetch<ProjectTaskItem[]>(`/projects/${projectId}/tasks`);
+}
+
+export async function createProjectTask(
+  projectId: string,
+  data: {
+    code?: string;
+    name: string;
+    nameFr?: string;
+    zoneId?: string;
+    parentId?: string;
+    predecessorId?: string;
+    assigneeId?: string;
+    startDate?: string;
+    endDate?: string;
+    laborCount?: number;
+    durationDays?: number;
+    prerequisites?: string;
+    progress?: number;
+    status?: string;
+    sortOrder?: number;
+    showInGantt?: boolean;
+  },
+) {
+  return apiFetch<ProjectTaskItem>(`/projects/${projectId}/tasks`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateProjectTask(
+  projectId: string,
+  taskId: string,
+  data: Partial<{
+    code: string | null;
+    name: string;
+    nameFr: string | null;
+    zoneId: string | null;
+    parentId: string | null;
+    predecessorId: string | null;
+    assigneeId: string | null;
+    startDate: string | null;
+    endDate: string | null;
+    laborCount: number | null;
+    durationDays: number | null;
+    prerequisites: string | null;
+    progress: number;
+    status: string;
+    sortOrder: number;
+    showInGantt?: boolean;
+  }>,
+) {
+  return apiFetch<ProjectTaskItem>(`/projects/${projectId}/tasks/${taskId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function reorderProjectTasks(
+  projectId: string,
+  orderedIds: string[],
+) {
+  return apiFetch<ProjectTaskItem[]>(`/projects/${projectId}/tasks/reorder`, {
+    method: 'PUT',
+    body: JSON.stringify({ orderedIds }),
+  });
+}
+
+export async function deleteProjectTask(projectId: string, taskId: string) {
+  return apiFetch<null>(`/projects/${projectId}/tasks/${taskId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function importProjectTasks(
+  projectId: string,
+  data: { content: string; replace?: boolean },
+) {
+  return apiFetch<{
+    imported: number;
+    errors: string[];
+    taskIds: string[];
+  }>(`/projects/${projectId}/tasks/import`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function exportProjectTasks(projectId: string) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+  const res = await fetch(`${API_URL}/projects/${projectId}/tasks/export`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error('导出失败');
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition');
+  const match = disposition?.match(/filename="(.+)"/);
+  const filename = match?.[1]
+    ? decodeURIComponent(match[1])
+    : `project-tasks-${Date.now()}.csv`;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 export interface AuditLogItem {

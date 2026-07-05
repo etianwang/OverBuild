@@ -30,6 +30,7 @@ const PERMISSIONS = [
   { code: 'project.zone.manage', name: '施工区域管理', module: 'project' },
   { code: 'project.member.manage', name: '项目成员管理', module: 'project' },
   { code: 'project.milestone.manage', name: '里程碑管理', module: 'project' },
+  { code: 'project.task.manage', name: '施工内容管理', module: 'project' },
 ];
 
 async function main() {

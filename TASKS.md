@@ -150,13 +150,15 @@ npm run test:e2e    # E2E 通过
 ### 4. 项目 (project)
 
 - [x] 读文档：`docs/modules/project.md`
-- [x] 数据库：`projects`、`project_zones`、`project_members`、`project_milestones`
+- [x] 数据库：`projects`、`project_zones`、`project_members`、`project_milestones`、**`project_tasks`**
 - [x] API：项目 CRUD、区域、成员、里程碑、利润/成本分析（财务模块待接入）
+- [x] API：**施工计划** — 任务 CRUD、排序、甘特总览、CSV 导入/导出
 - [x] 前端：项目列表、详情、表单
+- [x] 前端：**施工计划页** — DHTMLX 原生甘特编辑 + CSV/MS Project 导出
 - [x] 测试：project.service.spec.ts、project.e2e-spec.ts
 - [x] 自动化验收：lint / build / test / test:e2e 全绿
-- [ ] 本地验证：创建项目 + 区域/成员/里程碑手工验收
-- [ ] 完成
+- [x] 本地验证：API 13 项 + 前端手工验收通过（`scripts/accept-project.ps1` + `/projects`）
+- [x] 完成
 
 ### 5. 审批 (workflow)
 
@@ -299,16 +301,15 @@ graph TD
 
 | 阶段 | 模块 | 状态 |
 |------|------|------|
-| 0 | 工程初始化 | 基本完成 |
-| A | auth → settings | auth/audit-log 进行中 |
-| B | project | 未开始 |
-| C | workflow | 未开始 |
-| D | material → warehouse | 未开始 |
-| E | contract → finance | 未开始 |
-| F | document → translation | 未开始 |
-| G | notification → dashboard | 未开始 |
+| 0 | 工程初始化 | ✅ 基本完成（0.7 通用组件随模块推进，0.8/0.9 后置） |
+| A | auth | ✅ 完成 |
+| A | audit-log | ✅ 完成 |
+| A | settings | ✅ 完成 |
+| B | project | ✅ 完成 |
+| C | workflow | ⬜ **下一项** |
+| D–G | material → dashboard | 未开始 |
 
-**下一步**：完成 auth 本地验收 → 模块 3 settings → 模块 4 project
+**下一步**：**模块 5 workflow（审批）**
 
 ---
 
