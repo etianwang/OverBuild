@@ -1,0 +1,32 @@
+{
+  "name": "overbuild",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "lint": "npm run lint -w @overbuild/api && npm run lint -w @overbuild/web",
+    "build": "npm run build -w @overbuild/api && npm run build -w @overbuild/web",
+    "test": "npm run test -w @overbuild/api && npm run test -w @overbuild/web",
+    "test:e2e": "npm run test:e2e -w @overbuild/api",
+    "dev:api": "npm run dev -w @overbuild/api",
+    "dev:web": "npm run dev -w @overbuild/web",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "bcrypt": "^6.0.0",
+    "prisma": "^6.9.0",
+    "tsx": "^4.19.4"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}

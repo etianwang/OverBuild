@@ -1,0 +1,42 @@
+---
+description: NestJS module structure — every backend module needs full stack
+globs: apps/api/**/*
+alwaysApply: false
+---
+
+# NestJS Module Requirements
+
+Every backend module under `apps/api/` must include:
+
+| Layer | File pattern | Responsibility |
+|-------|-------------|----------------|
+| **Repository** | `*.repository.ts` | Prisma data access |
+| **Service** | `*.service.ts` | Business logic, audit_log |
+| **Controller** | `*.controller.ts` | HTTP routes, guards |
+| **DTO** | `dto/*.dto.ts` | Request/response shapes |
+| **Validation** | `class-validator` on DTOs | Input validation → 422 |
+| **Swagger** | `@ApiTags` `@ApiOperation` | Document every endpoint |
+| **Unit Test** | `*.service.spec.ts` | Service + repository logic |
+| **E2E Test** | `test/*.e2e-spec.ts` | API integration via Playwright/Vitest |
+
+## Module Checklist
+
+```
+modules/{name}/
+  {name}.module.ts
+  {name}.controller.ts
+  {name}.service.ts
+  {name}.repository.ts
+  {name}.service.spec.ts
+  dto/
+    create-{name}.dto.ts
+    update-{name}.dto.ts
+```
+
+## Patterns
+
+- Controller → Service → Repository (never Prisma in controller)
+- `@Permissions('module.resource.action')` on every route
+- Response via global interceptor: `{ success, data, message }`
+- Write operations call `AuditLogService.create()`
+- Register module in `app.module.ts` and Swagger

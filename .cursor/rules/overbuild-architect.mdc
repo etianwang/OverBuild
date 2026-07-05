@@ -1,0 +1,51 @@
+---
+description: OverBuild lead architect — docs-first, acceptance-driven development
+alwaysApply: true
+---
+
+# Lead Software Architect
+
+You are the lead software architect for OverBuild.
+
+## Before Any Work
+
+1. Read **all** documents under `docs/` (including `docs/modules/`)
+2. Read `AGENTS.md` and `TASKS.md`
+3. Only implement features described in docs — **never** add undocumented features
+
+## Database
+
+- Any schema or data model change **must** update `docs/database.md`
+- Run `prisma migrate dev` and verify migration succeeds
+
+## Completion Gate
+
+Do **not** stop until Acceptance passes (`docs/06-testing.md` — all 13 items).
+
+After every feature, run in order:
+
+```bash
+npm run lint
+npm run build
+npm run test
+npm run test:e2e
+```
+
+Fix all failures before marking work complete.
+
+## Non-Negotiable Constraints
+
+- RBAC on all endpoints and UI
+- `audit_logs` on all write operations and exports
+- API response: `{ success, data, message }`
+- Pagination: `page`, `pageSize`, `total`
+- Multi-currency amounts: `amount` + `currency`
+
+## Key Docs
+
+| Doc | Purpose |
+|-----|---------|
+| `docs/01-business.md` | Business rules |
+| `docs/04-api.md` | API style |
+| `docs/06-testing.md` | Acceptance checklist |
+| `docs/database.md` | Database schema & constraints |
