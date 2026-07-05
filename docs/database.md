@@ -86,6 +86,7 @@
 | 日期 | Migration | 说明 |
 |------|-----------|------|
 | 2026-07-05 | init_auth | users, roles, permissions, audit_logs, settings |
+| 2026-07-05 | init_project | projects, project_zones, project_members, project_milestones |
 
 ---
 

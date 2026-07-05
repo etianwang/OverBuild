@@ -29,6 +29,19 @@ enum AuditAction {
   logout
 }
 
+enum ProjectStatus {
+  planning
+  active
+  suspended
+  completed
+}
+
+enum MilestoneStatus {
+  pending
+  completed
+  overdue
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -42,8 +55,10 @@ model User {
   updatedAt    DateTime   @updatedAt @map("updated_at")
   deletedAt    DateTime?  @map("deleted_at")
 
-  userRoles UserRole[]
-  auditLogs AuditLog[]
+  userRoles       UserRole[]
+  auditLogs       AuditLog[]
+  managedProjects Project[]       @relation("ProjectManager")
+  projectMembers  ProjectMember[]
 
   @@map("users")
 }
@@ -138,4 +153,76 @@ model UserPreference {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("user_preferences")
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  code        String        @unique
+  name        String
+  nameFr      String?       @map("name_fr")
+  location    String?
+  status      ProjectStatus @default(planning)
+  startDate   DateTime?     @map("start_date") @db.Date
+  endDate     DateTime?     @map("end_date") @db.Date
+  description String?
+  managerId   String        @map("manager_id")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  deletedAt   DateTime?     @map("deleted_at")
+
+  manager    User               @relation("ProjectManager", fields: [managerId], references: [id])
+  zones      ProjectZone[]
+  members    ProjectMember[]
+  milestones ProjectMilestone[]
+
+  @@index([status])
+  @@index([managerId])
+  @@map("projects")
+}
+
+model ProjectZone {
+  id          String    @id @default(uuid())
+  projectId   String    @map("project_id")
+  name        String
+  nameFr      String?   @map("name_fr")
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("project_zones")
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  role      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model ProjectMilestone {
+  id          String          @id @default(uuid())
+  projectId   String          @map("project_id")
+  name        String
+  dueDate     DateTime?       @map("due_date") @db.Date
+  completedAt DateTime?       @map("completed_at")
+  status      MilestoneStatus @default(pending)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("project_milestones")
 }

@@ -80,6 +80,13 @@ export class UsersController {
     return this.authService.listUsers(+page, +pageSize, q);
   }
 
+  @Get(':id')
+  @Permissions('auth.user.read')
+  @ApiOperation({ summary: '用户详情' })
+  getOne(@Param('id') id: string) {
+    return this.authService.getUser(id);
+  }
+
   @Post()
   @Permissions('auth.user.create')
   @ApiOperation({ summary: '创建用户' })

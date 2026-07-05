@@ -22,6 +22,14 @@ const PERMISSIONS = [
   { code: 'auth.role.manage', name: '角色管理', module: 'auth' },
   { code: 'audit.read', name: '查看日志', module: 'audit' },
   { code: 'settings.system', name: '系统设置', module: 'settings' },
+  { code: 'project.read', name: '查看项目', module: 'project' },
+  { code: 'project.create', name: '创建项目', module: 'project' },
+  { code: 'project.update', name: '编辑项目', module: 'project' },
+  { code: 'project.delete', name: '删除项目', module: 'project' },
+  { code: 'project.export', name: '导出项目', module: 'project' },
+  { code: 'project.zone.manage', name: '施工区域管理', module: 'project' },
+  { code: 'project.member.manage', name: '项目成员管理', module: 'project' },
+  { code: 'project.milestone.manage', name: '里程碑管理', module: 'project' },
 ];
 
 async function main() {
@@ -89,6 +97,47 @@ async function main() {
     });
   }
 
+  const bossRole = await prisma.role.findUniqueOrThrow({ where: { code: 'boss' } });
+  const pmRole = await prisma.role.findUniqueOrThrow({
+    where: { code: 'project_manager' },
+  });
+
+  const projectRead = await prisma.permission.findUniqueOrThrow({
+    where: { code: 'project.read' },
+  });
+  const projectExport = await prisma.permission.findUniqueOrThrow({
+    where: { code: 'project.export' },
+  });
+  const pmPermissions = await prisma.permission.findMany({
+    where: { module: 'project' },
+  });
+
+  for (const permission of [projectRead, projectExport]) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: bossRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: { roleId: bossRole.id, permissionId: permission.id },
+    });
+  }
+
+  for (const permission of pmPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: pmRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: { roleId: pmRole.id, permissionId: permission.id },
+    });
+  }
+
   await prisma.systemSetting.upsert({
     where: { key: 'app.name' },
     update: {},
@@ -98,6 +147,19 @@ async function main() {
       description: '系统名称',
     },
   });
+
+  for (const item of [
+    { key: 'app.default_locale', value: 'zh', description: '默认语言' },
+    { key: 'app.base_currency', value: 'CNY', description: '本位币' },
+    { key: 'file.max_size_mb', value: 100, description: '上传限制 MB' },
+    { key: 'exchange.auto_update', value: true, description: '汇率自动更新' },
+  ]) {
+    await prisma.systemSetting.upsert({
+      where: { key: item.key },
+      update: {},
+      create: item,
+    });
+  }
 
   console.log('Seed completed. Default admin: admin / admin123');
 }

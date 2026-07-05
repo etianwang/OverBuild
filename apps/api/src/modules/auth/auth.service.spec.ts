@@ -97,4 +97,18 @@ describe('AuthService', () => {
     expect(result.user.username).toBe('admin');
     expect(auditLogService.create).toHaveBeenCalled();
   });
+
+  it('locks account after 5 failed attempts', async () => {
+    authRepository.findUserByUsername.mockResolvedValue(null);
+
+    for (let i = 0; i < 5; i++) {
+      await expect(
+        service.login({ username: 'locked', password: 'wrong12' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    }
+
+    await expect(
+      service.login({ username: 'locked', password: 'wrong12' }),
+    ).rejects.toThrow('账户已锁定');
+  });
 });

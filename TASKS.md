@@ -2,6 +2,18 @@
 
 > 一个模块一个模块，**完成一个再做下一个**。每个模块必须验收 13 项（见 `docs/06-testing.md`）。
 
+## 开发策略
+
+**先功能实现，后容器化与部署。**
+
+| 优先级 | 内容 |
+|--------|------|
+| **P0** | 按模块顺序实现 API + 前端 + 测试 |
+| **P1** | 通用组件（DataTable、导出、搜索）随模块迭代补齐 |
+| **P2** | Docker Compose、CI/CD、Nginx 部署（功能稳定后再做） |
+
+本地开发可直接安装 PostgreSQL + Redis，不必依赖 Docker。
+
 ---
 
 ## 单模块实现流程
@@ -48,11 +60,12 @@ npm run test:e2e    # E2E 通过
 | 0.1 | 文档体系 | ✅ |
 | 0.2 | Cursor Rules | ✅ |
 | 0.3 | 初始化 monorepo（NestJS + Next.js） | ✅ |
-| 0.4 | Docker Compose 本地环境 | ✅ |
+| 0.4 | Docker Compose 本地环境 | ⏸ 后置 |
 | 0.5 | 全局 Layout（Sidebar + TopBar） | ✅ |
 | 0.6 | 主题系统（Graphite Gray / Primary Blue / Dark Mode） | ✅ |
-| 0.7 | 通用组件（DataTable、Excel 导出、分页、搜索） | ⬜ |
-| 0.8 | GitHub Actions CI | ⬜ |
+| 0.7 | 通用组件（DataTable、Excel 导出、分页、搜索） | ⬜ 随模块推进 |
+| 0.8 | GitHub Actions CI | ⏸ 后置 |
+| 0.9 | Nginx + 生产部署 | ⏸ 后置 |
 
 ---
 
@@ -108,9 +121,10 @@ npm run test:e2e    # E2E 通过
 - [x] 数据库：`users`、`roles`、`permissions`、`role_permissions`、`user_roles`
 - [x] API：登录/登出/刷新/me、用户管理、角色列表
 - [x] 前端：登录页、Dashboard 骨架、Layout
-- [x] 测试：auth.service.spec.ts
-- [ ] 本地验证：docker + migrate + seed + 验收 13 项
-- [ ] 完成
+- [x] 测试：auth.service.spec.ts、auth.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 本地验证：PostgreSQL migrate + seed + API 手工验收通过
+- [x] 完成
 
 ### 2. 日志 (audit-log)
 
@@ -123,20 +137,24 @@ npm run test:e2e    # E2E 通过
 
 ### 3. 系统设置 (settings)
 
-- [ ] 读文档：`docs/modules/settings.md`
-- [ ] 数据库：`system_settings`、`user_preferences`
-- [ ] API：系统配置、个人偏好、修改密码
-- [ ] 前端：系统设置页、个人设置页
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/settings.md`
+- [x] 数据库：`system_settings`、`user_preferences`
+- [x] API：系统配置、个人偏好、修改密码
+- [x] 前端：系统设置页（个人信息 / 密码 / 偏好 / 系统配置）
+- [x] 测试：settings.service.spec.ts、settings.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 本地验证：PostgreSQL migrate + seed + API 手工验收通过
+- [x] 完成
 
 ### 4. 项目 (project)
 
-- [ ] 读文档：`docs/modules/project.md`
-- [ ] 数据库：`projects`、`project_zones`、`project_members`、`project_milestones`
-- [ ] API：项目 CRUD、区域、成员、里程碑、利润/成本分析
-- [ ] 前端：项目列表、详情、表单
-- [ ] 测试 + 验收 13 项
+- [x] 读文档：`docs/modules/project.md`
+- [x] 数据库：`projects`、`project_zones`、`project_members`、`project_milestones`
+- [x] API：项目 CRUD、区域、成员、里程碑、利润/成本分析（财务模块待接入）
+- [x] 前端：项目列表、详情、表单
+- [x] 测试：project.service.spec.ts、project.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [ ] 本地验证：创建项目 + 区域/成员/里程碑手工验收
 - [ ] 完成
 
 ### 5. 审批 (workflow)
@@ -289,4 +307,12 @@ graph TD
 | F | document → translation | 未开始 |
 | G | notification → dashboard | 未开始 |
 
-**下一步**：阶段 0.3 初始化 monorepo → 模块 1 auth
+**下一步**：完成 auth 本地验收 → 模块 3 settings → 模块 4 project
+
+---
+
+## 后期：容器化与部署（功能完成后）
+
+- [ ] Docker Compose 编排（api + web + db + redis）
+- [ ] GitHub Actions CI 流水线
+- [ ] Ubuntu + Nginx 生产部署

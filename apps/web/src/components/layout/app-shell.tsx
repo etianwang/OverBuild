@@ -1,23 +1,43 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Moon, Search, Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { logout } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/primitives';
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/users', label: '用户' },
+  { href: '/dashboard', label: 'Dashboard', permission: null },
+  { href: '/projects', label: '项目', permission: 'project.read' },
+  { href: '/users', label: '用户', permission: 'auth.user.read' },
+  { href: '/settings', label: '设置', permission: null },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { theme, setTheme } = useTheme();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+
+  const visibleNav = NAV.filter(
+    (item) =>
+      !item.permission || user?.permissions?.includes(item.permission),
+  );
+
+  async function handleLogout() {
+    try {
+      await logout();
+    } catch {
+      // ignore
+    } finally {
+      clearAuth();
+      router.push('/login');
+    }
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {user?.name}
             </span>
-            <Button variant="ghost" onClick={clearAuth}>
+            <Button variant="ghost" onClick={handleLogout}>
               退出
             </Button>
           </div>
@@ -52,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex">
         <aside className="hidden w-56 shrink-0 border-r border-border bg-card p-4 lg:block">
           <nav className="space-y-1">
-            {NAV.map((item) => (
+            {visibleNav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

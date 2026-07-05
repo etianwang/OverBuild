@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { ProjectModule } from './modules/project/project.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -11,6 +13,8 @@ import { HealthController } from './health.controller';
     PrismaModule,
     AuditLogModule,
     AuthModule,
+    SettingsModule,
+    ProjectModule,
   ],
   controllers: [HealthController],
 })

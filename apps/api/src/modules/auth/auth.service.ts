@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -149,7 +149,31 @@ export class AuthService {
     return { list, page, pageSize, total };
   }
 
+  async getUser(id: string) {
+    const user = await this.authRepository.findUserById(id);
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+    return {
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      locale: user.locale,
+      status: user.status,
+      roles: user.userRoles.map((ur) => ur.role.code),
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    };
+  }
+
   async createUser(dto: CreateUserDto, operatorId: string) {
+    const existing = await this.authRepository.findUserByUsername(dto.username);
+    if (existing) {
+      throw new ConflictException('用户名已存在');
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = await this.authRepository.createUser({
       username: dto.username,

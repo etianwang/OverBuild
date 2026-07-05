@@ -2,7 +2,11 @@
 
 驻外工程项目综合管理平台。
 
-## 快速开始
+## 开发策略
+
+**先功能实现，后容器化与部署。** 按 `TASKS.md` 模块顺序逐个完成 API + 前端 + 测试。
+
+## 快速开始（本地开发）
 
 ```bash
 # 1. 安装依赖
@@ -10,18 +14,30 @@ npm install
 
 # 2. 环境变量
 cp .env.example .env
+# 编辑 .env 中的 DATABASE_URL，指向本地 PostgreSQL
 
-# 3. 启动数据库
-docker compose up -d
-
-# 4. 数据库迁移与种子
+# 3. 数据库迁移与种子（需本地 PostgreSQL 运行中）
 npm run db:generate
 npm run db:migrate
 npm run db:seed
 
-# 5. 启动开发服务
+# 4. 启动开发服务
 npm run dev:api   # http://localhost:3001
 npm run dev:web   # http://localhost:3000
+```
+
+### 数据库（二选一）
+
+**方式 A：本地安装 PostgreSQL**（推荐，开发阶段）
+
+```
+DATABASE_URL="postgresql://user:password@localhost:5432/overbuild?schema=public"
+```
+
+**方式 B：Docker**（可选，部署阶段再重点使用）
+
+```bash
+docker compose up -d
 ```
 
 ## 默认账号
