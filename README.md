@@ -8,37 +8,55 @@
 
 ## 快速开始（本地开发）
 
+### 方式 A：Docker Compose（推荐）
+
 ```bash
 # 1. 安装依赖
 npm install
 
 # 2. 环境变量
 cp .env.example .env
-# 编辑 .env 中的 DATABASE_URL，指向本地 PostgreSQL
 
-# 3. 数据库迁移与种子（需本地 PostgreSQL 运行中）
-npm run db:generate
-npm run db:migrate
-npm run db:seed
+# 3. 启动 PostgreSQL + Redis，并初始化数据库
+npm run docker:init
 
 # 4. 启动开发服务
 npm run dev:api   # http://localhost:3001
 npm run dev:web   # http://localhost:3000
 ```
 
-### 数据库（二选一）
-
-**方式 A：本地安装 PostgreSQL**（推荐，开发阶段）
-
-```
-DATABASE_URL="postgresql://user:password@localhost:5432/overbuild?schema=public"
-```
-
-**方式 B：Docker**（可选，部署阶段再重点使用）
+若本机 5432 端口已被占用，可改用其他端口：
 
 ```bash
-docker compose up -d
+# PowerShell
+$env:POSTGRES_PORT=5433; docker compose up -d
+# 并将 .env 中 DATABASE_URL 改为 localhost:5433
+npm run db:setup
 ```
+
+常用 Docker 命令：
+
+| 命令 | 说明 |
+|------|------|
+| `npm run docker:up` | 启动 db + redis |
+| `npm run docker:down` | 停止并保留数据卷 |
+| `npm run docker:logs` | 查看容器日志 |
+| `npm run docker:init` | 启动容器 + migrate + seed |
+
+### 方式 B：本地安装 PostgreSQL
+
+```bash
+npm install
+cp .env.example .env
+# 编辑 .env 中的 DATABASE_URL
+npm run db:generate
+npm run db:migrate
+npm run db:seed
+npm run dev:api
+npm run dev:web
+```
+
+Windows 本地 PostgreSQL 初始化脚本见 `scripts/` 目录。
 
 ## 默认账号
 

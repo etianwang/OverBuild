@@ -60,7 +60,7 @@ npm run test:e2e    # E2E 通过
 | 0.1 | 文档体系 | ✅ |
 | 0.2 | Cursor Rules | ✅ |
 | 0.3 | 初始化 monorepo（NestJS + Next.js） | ✅ |
-| 0.4 | Docker Compose 本地环境 | ⏸ 后置 |
+| 0.4 | Docker Compose 本地环境 | ✅ |
 | 0.5 | 全局 Layout（Sidebar + TopBar） | ✅ |
 | 0.6 | 主题系统（Graphite Gray / Primary Blue / Dark Mode） | ✅ |
 | 0.7 | 通用组件（DataTable、Excel 导出、分页、搜索） | ⬜ 随模块推进 |
@@ -130,10 +130,11 @@ npm run test:e2e    # E2E 通过
 
 - [x] 读文档：`docs/modules/audit-log.md`
 - [x] 数据库：`audit_logs`
-- [x] API：`AuditLogService` + 查询接口
-- [ ] 前端：日志审计页（管理员）
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] API：列表/详情/导出、筛选参数
+- [x] 前端：审计日志页（管理员）
+- [x] 测试：audit-log.service.spec.ts、audit-log.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 3. 系统设置 (settings)
 

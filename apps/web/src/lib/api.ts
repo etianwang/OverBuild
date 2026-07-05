@@ -281,3 +281,84 @@ export async function createProjectMilestone(
     body: JSON.stringify(data),
   });
 }
+
+export interface AuditLogItem {
+  id: string;
+  userId: string | null;
+  action: string;
+  module: string;
+  resource: string;
+  resourceId: string | null;
+  payload: unknown;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    username: string;
+    name: string;
+    email?: string | null;
+  } | null;
+}
+
+export async function listAuditLogs(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  module?: string;
+  action?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.module) search.set('module', params.module);
+  if (params?.action) search.set('action', params.action);
+  if (params?.startDate) search.set('startDate', params.startDate);
+  if (params?.endDate) search.set('endDate', params.endDate);
+  return apiFetch<Paginated<AuditLogItem>>(`/audit-logs?${search}`);
+}
+
+export async function getAuditLog(id: string) {
+  return apiFetch<AuditLogItem>(`/audit-logs/${id}`);
+}
+
+export async function exportAuditLogs(params?: {
+  q?: string;
+  module?: string;
+  action?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const search = new URLSearchParams();
+  if (params?.q) search.set('q', params.q);
+  if (params?.module) search.set('module', params.module);
+  if (params?.action) search.set('action', params.action);
+  if (params?.startDate) search.set('startDate', params.startDate);
+  if (params?.endDate) search.set('endDate', params.endDate);
+
+  const res = await fetch(`${API_URL}/audit-logs/export?${search}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error('导出失败');
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition');
+  const match = disposition?.match(/filename="(.+)"/);
+  const filename = match?.[1] ?? `audit-logs-${Date.now()}.csv`;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
