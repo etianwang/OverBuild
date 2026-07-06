@@ -34,6 +34,13 @@ const PERMISSIONS = [
   { code: 'project.task.manage', name: '施工内容管理', module: 'project' },
   { code: 'workflow.approve', name: '审批处理', module: 'workflow' },
   { code: 'workflow.template.manage', name: '审批模板管理', module: 'workflow' },
+  { code: 'material.read', name: '查看材料', module: 'material' },
+  { code: 'material.create', name: '新增材料', module: 'material' },
+  { code: 'material.update', name: '编辑材料', module: 'material' },
+  { code: 'material.delete', name: '删除材料', module: 'material' },
+  { code: 'material.import', name: '导入材料', module: 'material' },
+  { code: 'material.export', name: '导出材料', module: 'material' },
+  { code: 'material.category.manage', name: '材料分类管理', module: 'material' },
 ];
 
 async function main() {
@@ -108,6 +115,12 @@ async function main() {
   const financeRole = await prisma.role.findUniqueOrThrow({
     where: { code: 'finance' },
   });
+  const procurementRole = await prisma.role.findUniqueOrThrow({
+    where: { code: 'procurement' },
+  });
+  const warehouseRole = await prisma.role.findUniqueOrThrow({
+    where: { code: 'warehouse' },
+  });
 
   const workflowApprove = await prisma.permission.findUniqueOrThrow({
     where: { code: 'workflow.approve' },
@@ -162,11 +175,43 @@ async function main() {
     });
   }
 
+  const materialPerms = await prisma.permission.findMany({
+    where: { module: 'material' },
+  });
+  const materialReadExport = materialPerms.filter((p) =>
+    ['material.read', 'material.export'].includes(p.code),
+  );
+  const materialWrite = materialPerms.filter((p) =>
+    ['material.read', 'material.create', 'material.update', 'material.import', 'material.export'].includes(
+      p.code,
+    ),
+  );
+
+  async function grantPerms(roleId: string, permissions: typeof materialPerms) {
+    for (const permission of permissions) {
+      await prisma.rolePermission.upsert({
+        where: {
+          roleId_permissionId: { roleId, permissionId: permission.id },
+        },
+        update: {},
+        create: { roleId, permissionId: permission.id },
+      });
+    }
+  }
+
+  await grantPerms(procurementRole.id, materialWrite);
+  await grantPerms(warehouseRole.id, materialPerms);
+  for (const role of [bossRole, pmRole]) {
+    await grantPerms(role.id, materialReadExport);
+  }
+
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
     { username: 'pm', name: '项目经理张三', role: pmRole },
     { username: 'finance', name: '财务李四', role: financeRole },
     { username: 'boss', name: '老板王五', role: bossRole },
+    { username: 'procurement', name: '采购赵六', role: procurementRole },
+    { username: 'warehouse', name: '仓管钱七', role: warehouseRole },
   ];
 
   for (const demo of demoUsers) {
@@ -289,6 +334,90 @@ async function main() {
           name: tpl.name,
           nodes: tpl.nodes,
           isActive: true,
+        },
+      });
+    }
+  }
+
+  const pipeCategory = await prisma.materialCategory.upsert({
+    where: { code: 'PIPE' },
+    update: { name: '管材' },
+    create: {
+      code: 'PIPE',
+      name: '管材',
+      description: '镀锌管、无缝钢管等',
+    },
+  });
+
+  const steelCategory = await prisma.materialCategory.upsert({
+    where: { code: 'STEEL' },
+    update: { name: '钢材' },
+    create: {
+      code: 'STEEL',
+      name: '钢材',
+      description: '型钢、钢板等',
+    },
+  });
+
+  const demoMaterials = [
+    {
+      code: 'MAT-DEMO-001',
+      name: '镀锌钢管',
+      spec: 'DN50',
+      brand: '某某钢铁',
+      unit: '米',
+      categoryId: pipeCategory.id,
+      minStock: 100,
+      amount: 45.5,
+      stock: 80,
+    },
+    {
+      code: 'MAT-DEMO-002',
+      name: 'H型钢',
+      spec: '200×200',
+      unit: '吨',
+      categoryId: steelCategory.id,
+      minStock: 5,
+      amount: 5200,
+      stock: 12,
+    },
+  ];
+
+  for (const item of demoMaterials) {
+    const material = await prisma.material.upsert({
+      where: { code: item.code },
+      update: {
+        name: item.name,
+        spec: item.spec,
+        unit: item.unit,
+        minStock: item.minStock,
+        stock: item.stock,
+        purchasePriceAmount: item.amount,
+        purchasePriceCurrency: 'CNY',
+      },
+      create: {
+        code: item.code,
+        name: item.name,
+        spec: item.spec,
+        brand: item.brand,
+        unit: item.unit,
+        categoryId: item.categoryId,
+        minStock: item.minStock,
+        stock: item.stock,
+        purchasePriceAmount: item.amount,
+        purchasePriceCurrency: 'CNY',
+      },
+    });
+
+    const historyExists = await prisma.materialPriceHistory.findFirst({
+      where: { materialId: material.id },
+    });
+    if (!historyExists) {
+      await prisma.materialPriceHistory.create({
+        data: {
+          materialId: material.id,
+          amount: item.amount,
+          currency: 'CNY',
         },
       });
     }

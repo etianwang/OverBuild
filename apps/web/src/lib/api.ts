@@ -716,3 +716,190 @@ export async function exportApprovals(params?: {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+export interface MoneyValue {
+  amount: number;
+  currency: string;
+}
+
+export interface MaterialCategoryItem {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+}
+
+export interface MaterialItem {
+  id: string;
+  code: string;
+  name: string;
+  spec?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  unit: string;
+  categoryId: string;
+  stock: number;
+  minStock?: number | null;
+  purchasePrice?: MoneyValue | null;
+  latestPrice?: MoneyValue | null;
+  imageUrl?: string | null;
+  supplierId?: string | null;
+  category?: { id: string; code: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaterialAlertItem {
+  id: string;
+  code: string;
+  name: string;
+  stock: number;
+  minStock: number;
+  unit: string;
+  gap: number;
+  category?: MaterialCategoryItem | null;
+}
+
+export async function listMaterials(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+  categoryId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.sort) search.set('sort', params.sort);
+  if (params?.order) search.set('order', params.order);
+  if (params?.categoryId) search.set('categoryId', params.categoryId);
+  return apiFetch<Paginated<MaterialItem>>(`/materials?${search}`);
+}
+
+export async function listMaterialAlerts(params?: {
+  page?: number;
+  pageSize?: number;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  return apiFetch<Paginated<MaterialAlertItem>>(`/materials/alerts?${search}`);
+}
+
+export async function listMaterialCategories() {
+  return apiFetch<MaterialCategoryItem[]>('/materials/categories');
+}
+
+export async function createMaterialCategory(data: {
+  code: string;
+  name: string;
+  description?: string;
+}) {
+  return apiFetch<MaterialCategoryItem>('/materials/categories', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createMaterial(data: {
+  code: string;
+  name: string;
+  spec?: string;
+  brand?: string;
+  model?: string;
+  unit: string;
+  categoryId: string;
+  minStock?: number;
+  purchasePrice?: MoneyValue;
+  imageUrl?: string;
+  supplierId?: string;
+}) {
+  return apiFetch<MaterialItem>('/materials', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateMaterial(
+  id: string,
+  data: Partial<{
+    code: string;
+    name: string;
+    spec: string | null;
+    brand: string | null;
+    model: string | null;
+    unit: string;
+    categoryId: string;
+    minStock: number | null;
+    purchasePrice: MoneyValue | null;
+    imageUrl: string | null;
+    supplierId: string | null;
+  }>,
+) {
+  return apiFetch<MaterialItem>(`/materials/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteMaterial(id: string) {
+  return apiFetch<null>(`/materials/${id}`, { method: 'DELETE' });
+}
+
+export async function importMaterials(content: string) {
+  return apiFetch<{ imported: number; errors: string[]; total: number }>(
+    '/materials/import',
+    {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    },
+  );
+}
+
+export async function exportMaterials(params?: {
+  q?: string;
+  categoryId?: string;
+  sort?: string;
+  order?: 'asc' | 'desc';
+}) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const search = new URLSearchParams();
+  if (params?.q) search.set('q', params.q);
+  if (params?.categoryId) search.set('categoryId', params.categoryId);
+  if (params?.sort) search.set('sort', params.sort);
+  if (params?.order) search.set('order', params.order);
+
+  const res = await fetch(`${API_URL}/materials/export?${search}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error('导出失败');
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition');
+  const match = disposition?.match(/filename="(.+)"/);
+  const filename = match?.[1] ?? `materials-${Date.now()}.csv`;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function getMaterialQrcode(id: string) {
+  return apiFetch<{
+    materialId: string;
+    code: string;
+    payload: string;
+    qrcodeUrl: string;
+  }>(`/materials/${id}/qrcode`);
+}

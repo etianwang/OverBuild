@@ -135,6 +135,7 @@ npm run db:seed        # 同步种子数据并再次扫描
 | 2026-07-05 | project_task_fields | labor_count, duration_days, prerequisites, predecessor_id, assignee_id |
 | 2026-07-05 | project_task_gantt_flag | show_in_gantt |
 | 2026-07-06 | workflow_approval | approval_instances, approval_records, approval_templates, notifications |
+| 2026-07-06 | material | materials, material_categories, material_price_history, material_qrcodes, stock_transactions |
 
 ---
 

@@ -76,6 +76,12 @@ enum NotificationType {
   system
 }
 
+enum StockTransactionType {
+  inbound
+  outbound
+  adjustment
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -214,6 +220,7 @@ model Project {
   milestones ProjectMilestone[]
   tasks      ProjectTask[]
   approvals  ApprovalInstance[]
+  stockTransactions StockTransaction[]
 
   @@index([status])
   @@index([managerId])
@@ -377,4 +384,95 @@ model Notification {
   @@index([userId])
   @@index([userId, isRead])
   @@map("notifications")
+}
+
+model MaterialCategory {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  name        String
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  materials Material[]
+
+  @@map("material_categories")
+}
+
+model Material {
+  id                     String    @id @default(uuid())
+  code                   String    @unique
+  name                   String
+  spec                   String?
+  brand                  String?
+  model                  String?
+  unit                   String
+  categoryId             String    @map("category_id")
+  stock                  Decimal   @default(0) @db.Decimal(18, 4)
+  minStock               Decimal?  @map("min_stock") @db.Decimal(18, 4)
+  purchasePriceAmount    Decimal?  @map("purchase_price_amount") @db.Decimal(18, 4)
+  purchasePriceCurrency  String?   @map("purchase_price_currency") @db.Char(3)
+  imageUrl               String?   @map("image_url")
+  supplierId             String?   @map("supplier_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+  deletedAt              DateTime? @map("deleted_at")
+
+  category        MaterialCategory      @relation(fields: [categoryId], references: [id])
+  priceHistory    MaterialPriceHistory[]
+  qrcode          MaterialQrcode?
+  stockTransactions StockTransaction[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@map("materials")
+}
+
+model MaterialPriceHistory {
+  id          String   @id @default(uuid())
+  materialId  String   @map("material_id")
+  amount      Decimal  @db.Decimal(18, 4)
+  currency    String   @db.Char(3)
+  supplierId  String?  @map("supplier_id")
+  effectiveAt DateTime @default(now()) @map("effective_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([materialId, effectiveAt])
+  @@map("material_price_history")
+}
+
+model MaterialQrcode {
+  id         String   @id @default(uuid())
+  materialId String   @unique @map("material_id")
+  qrcodeUrl  String   @map("qrcode_url")
+  payload    String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@map("material_qrcodes")
+}
+
+model StockTransaction {
+  id            String               @id @default(uuid())
+  materialId    String               @map("material_id")
+  type          StockTransactionType
+  quantity      Decimal              @db.Decimal(18, 4)
+  balanceAfter  Decimal?             @map("balance_after") @db.Decimal(18, 4)
+  reference     String?
+  warehouseId   String?              @map("warehouse_id")
+  projectId     String?              @map("project_id")
+  createdAt     DateTime             @default(now()) @map("created_at")
+
+  material Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
+  project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([materialId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("stock_transactions")
 }

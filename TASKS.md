@@ -172,12 +172,13 @@ npm run test:e2e    # E2E 通过
 
 ### 6. 材料 (material)
 
-- [ ] 读文档：`docs/modules/material.md`
-- [ ] 数据库：`materials`、`material_categories`、`material_price_history`
-- [ ] API：材料 CRUD、分类、导入导出、二维码、预警
-- [ ] 前端：材料列表、表单、导入、预警
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/material.md`
+- [x] 数据库：`materials`、`material_categories`、`material_price_history`
+- [x] API：材料 CRUD、分类、导入导出、二维码、预警
+- [x] 前端：材料列表、表单、导入、预警
+- [x] 测试：material.service.spec.ts、material.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 7. 采购 (procurement)
 
@@ -308,9 +309,10 @@ graph TD
 | A | settings | ✅ 完成 |
 | B | project | ✅ 完成 |
 | C | workflow | ✅ 完成 |
-| D–G | material → dashboard | 未开始 |
+| D | material | ✅ 完成 |
+| D–G | procurement → dashboard | 未开始 |
 
-**下一步**：**模块 6 material（材料）**
+**下一步**：**模块 7 procurement（采购）**
 
 ---
 
