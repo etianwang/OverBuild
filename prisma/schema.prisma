@@ -112,6 +112,27 @@ enum QuotationStatus {
   rejected
 }
 
+enum WarehouseStatus {
+  active
+  inactive
+}
+
+enum StockDocumentStatus {
+  draft
+  confirmed
+}
+
+enum InboundType {
+  purchase
+  return
+  adjustment
+}
+
+enum OutboundType {
+  usage
+  transfer
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -255,6 +276,11 @@ model Project {
   materials  Material[]
   purchaseRequests PurchaseRequest[]
   purchaseOrders   PurchaseOrder[]
+  warehouses       Warehouse[]
+  stockInbounds    StockInbound[]
+  stockOutbounds   StockOutbound[]
+  stockBalances    StockBalance[]
+  stocktakes       Stocktake[]
 
   @@index([status])
   @@index([managerId])
@@ -273,6 +299,7 @@ model ProjectZone {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks   ProjectTask[]
+  outbounds StockOutbound[]
 
   @@index([projectId])
   @@map("project_zones")
@@ -460,6 +487,7 @@ model Material {
 
   category        MaterialCategory      @relation(fields: [categoryId], references: [id])
   project         Project               @relation(fields: [projectId], references: [id])
+  warehouse       Warehouse?            @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
   supplier        Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   priceHistory    MaterialPriceHistory[]
   qrcode          MaterialQrcode?
@@ -467,6 +495,9 @@ model Material {
   purchaseRequestItems PurchaseRequestItem[]
   purchaseOrderItems   PurchaseOrderItem[]
   quotations           Quotation[]
+  stockItems           StockItem[]
+  stockBalances        StockBalance[]
+  stocktakeItems       StocktakeItem[]
 
   @@unique([projectId, code])
   @@index([categoryId])
@@ -516,8 +547,10 @@ model StockTransaction {
 
   material Material @relation(fields: [materialId], references: [id], onDelete: Restrict)
   project  Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
 
   @@index([materialId])
+  @@index([warehouseId])
   @@index([projectId])
   @@index([createdAt])
   @@map("stock_transactions")
@@ -598,6 +631,7 @@ model PurchaseOrder {
   supplier Supplier         @relation(fields: [supplierId], references: [id])
   request  PurchaseRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
   items    PurchaseOrderItem[]
+  inbounds StockInbound[]
 
   @@index([projectId])
   @@index([supplierId])
@@ -642,4 +676,144 @@ model Quotation {
   @@index([supplierId])
   @@index([requestId])
   @@map("quotations")
+}
+
+model Warehouse {
+  id        String          @id @default(uuid())
+  code      String          @unique
+  name      String
+  projectId String          @map("project_id")
+  address   String?
+  status    WarehouseStatus @default(active)
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  deletedAt DateTime?       @map("deleted_at")
+
+  project        Project          @relation(fields: [projectId], references: [id])
+  materials      Material[]
+  inbounds       StockInbound[]
+  outbounds      StockOutbound[]
+  balances       StockBalance[]
+  stocktakes     Stocktake[]
+  stockTransactions StockTransaction[]
+
+  @@index([projectId])
+  @@map("warehouses")
+}
+
+model StockInbound {
+  id              String              @id @default(uuid())
+  code            String              @unique
+  warehouseId     String              @map("warehouse_id")
+  projectId       String              @map("project_id")
+  purchaseOrderId String?             @map("purchase_order_id")
+  type            InboundType
+  status          StockDocumentStatus @default(draft)
+  inboundAt       DateTime?           @map("inbound_at")
+  remark          String?
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  warehouse     Warehouse      @relation(fields: [warehouseId], references: [id])
+  project       Project        @relation(fields: [projectId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id], onDelete: SetNull)
+  items         StockItem[]
+
+  @@index([warehouseId])
+  @@index([projectId])
+  @@index([status])
+  @@map("stock_inbound")
+}
+
+model StockOutbound {
+  id          String              @id @default(uuid())
+  code        String              @unique
+  warehouseId String              @map("warehouse_id")
+  projectId   String              @map("project_id")
+  zoneId      String?             @map("zone_id")
+  type        OutboundType
+  status      StockDocumentStatus @default(draft)
+  outboundAt  DateTime?           @map("outbound_at")
+  remark      String?
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  warehouse Warehouse   @relation(fields: [warehouseId], references: [id])
+  project   Project     @relation(fields: [projectId], references: [id])
+  zone      ProjectZone? @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  items     StockItem[]
+
+  @@index([warehouseId])
+  @@index([projectId])
+  @@index([status])
+  @@map("stock_outbound")
+}
+
+model StockItem {
+  id         String  @id @default(uuid())
+  inboundId  String? @map("inbound_id")
+  outboundId String? @map("outbound_id")
+  materialId String  @map("material_id")
+  quantity   Decimal @db.Decimal(18, 4)
+  unit       String
+
+  inbound  StockInbound?  @relation(fields: [inboundId], references: [id], onDelete: Cascade)
+  outbound StockOutbound? @relation(fields: [outboundId], references: [id], onDelete: Cascade)
+  material Material       @relation(fields: [materialId], references: [id])
+
+  @@index([inboundId])
+  @@index([outboundId])
+  @@map("stock_items")
+}
+
+model StockBalance {
+  id          String  @id @default(uuid())
+  warehouseId String  @map("warehouse_id")
+  materialId  String  @map("material_id")
+  projectId   String  @map("project_id")
+  quantity    Decimal @default(0) @db.Decimal(18, 4)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  material  Material  @relation(fields: [materialId], references: [id])
+  project   Project   @relation(fields: [projectId], references: [id])
+
+  @@unique([warehouseId, materialId, projectId])
+  @@index([projectId])
+  @@map("stock_balances")
+}
+
+model Stocktake {
+  id          String              @id @default(uuid())
+  code        String              @unique
+  warehouseId String              @map("warehouse_id")
+  projectId   String              @map("project_id")
+  status      StockDocumentStatus @default(draft)
+  remark      String?
+  confirmedAt DateTime?           @map("confirmed_at")
+  createdAt   DateTime            @default(now()) @map("created_at")
+  updatedAt   DateTime            @updatedAt @map("updated_at")
+
+  warehouse Warehouse       @relation(fields: [warehouseId], references: [id])
+  project   Project         @relation(fields: [projectId], references: [id])
+  items     StocktakeItem[]
+
+  @@index([warehouseId])
+  @@index([projectId])
+  @@map("stocktakes")
+}
+
+model StocktakeItem {
+  id              String  @id @default(uuid())
+  stocktakeId     String  @map("stocktake_id")
+  materialId      String  @map("material_id")
+  bookQuantity    Decimal @map("book_quantity") @db.Decimal(18, 4)
+  countedQuantity Decimal @map("counted_quantity") @db.Decimal(18, 4)
+  unit            String
+
+  stocktake Stocktake @relation(fields: [stocktakeId], references: [id], onDelete: Cascade)
+  material  Material  @relation(fields: [materialId], references: [id])
+
+  @@index([stocktakeId])
+  @@map("stocktake_items")
 }

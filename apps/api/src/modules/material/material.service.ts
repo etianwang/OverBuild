@@ -317,7 +317,9 @@ export class MaterialService {
       category: { connect: { id: dto.categoryId } },
       project: { connect: { id: dto.projectId } },
       storageLocation: dto.storageLocation,
-      warehouseId: dto.warehouseId,
+      ...(dto.warehouseId
+        ? { warehouse: { connect: { id: dto.warehouseId } } }
+        : {}),
       minStock: dto.minStock,
       purchasePriceAmount: dto.purchasePrice?.amount,
       purchasePriceCurrency: dto.purchasePrice?.currency.toUpperCase(),
@@ -407,7 +409,11 @@ export class MaterialService {
       ...(dto.storageLocation !== undefined
         ? { storageLocation: dto.storageLocation }
         : {}),
-      ...(dto.warehouseId !== undefined ? { warehouseId: dto.warehouseId } : {}),
+      ...(dto.warehouseId !== undefined
+        ? dto.warehouseId
+          ? { warehouse: { connect: { id: dto.warehouseId } } }
+          : { warehouse: { disconnect: true } }
+        : {}),
       ...(dto.minStock !== undefined ? { minStock: dto.minStock } : {}),
       ...(dto.purchasePrice !== undefined
         ? {

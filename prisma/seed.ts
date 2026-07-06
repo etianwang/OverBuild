@@ -60,6 +60,26 @@ const PERMISSIONS = [
   { code: 'procurement.quotation.read', name: '查看询价', module: 'procurement' },
   { code: 'procurement.quotation.create', name: '创建询价', module: 'procurement' },
   { code: 'procurement.quotation.update', name: '更新询价', module: 'procurement' },
+  { code: 'warehouse.read', name: '查看仓库', module: 'warehouse' },
+  { code: 'warehouse.create', name: '新增仓库', module: 'warehouse' },
+  { code: 'warehouse.update', name: '编辑仓库', module: 'warehouse' },
+  { code: 'warehouse.delete', name: '停用仓库', module: 'warehouse' },
+  { code: 'warehouse.inbound.read', name: '查看入库单', module: 'warehouse' },
+  { code: 'warehouse.inbound.create', name: '创建入库单', module: 'warehouse' },
+  { code: 'warehouse.inbound.update', name: '编辑入库单', module: 'warehouse' },
+  { code: 'warehouse.inbound.confirm', name: '确认入库', module: 'warehouse' },
+  { code: 'warehouse.inbound.export', name: '导出入库单', module: 'warehouse' },
+  { code: 'warehouse.outbound.read', name: '查看出库单', module: 'warehouse' },
+  { code: 'warehouse.outbound.create', name: '创建出库单', module: 'warehouse' },
+  { code: 'warehouse.outbound.update', name: '编辑出库单', module: 'warehouse' },
+  { code: 'warehouse.outbound.confirm', name: '确认出库', module: 'warehouse' },
+  { code: 'warehouse.outbound.export', name: '导出出库单', module: 'warehouse' },
+  { code: 'warehouse.stocktake.read', name: '查看盘点单', module: 'warehouse' },
+  { code: 'warehouse.stocktake.create', name: '创建盘点', module: 'warehouse' },
+  { code: 'warehouse.stocktake.confirm', name: '确认盘点', module: 'warehouse' },
+  { code: 'warehouse.balance.read', name: '查看库存余额', module: 'warehouse' },
+  { code: 'warehouse.balance.export', name: '导出库存报表', module: 'warehouse' },
+  { code: 'warehouse.transaction.read', name: '查看库存流水', module: 'warehouse' },
 ];
 
 async function main() {
@@ -247,6 +267,41 @@ async function main() {
   await grantPerms(pmRole.id, pmProcurement);
   await grantPerms(bossRole.id, procurementReadExport);
   await grantPerms(financeRole.id, procurementReadExport);
+
+  const warehousePerms = await prisma.permission.findMany({
+    where: { module: 'warehouse' },
+  });
+  const warehouseReadExport = warehousePerms.filter(
+    (p) => p.code.endsWith('.read') || p.code.endsWith('.export'),
+  );
+  const procurementWarehouse = warehousePerms.filter((p) =>
+    [
+      'warehouse.read',
+      'warehouse.inbound.read',
+      'warehouse.inbound.export',
+      'warehouse.balance.read',
+      'warehouse.balance.export',
+      'warehouse.transaction.read',
+    ].includes(p.code),
+  );
+  const pmWarehouse = warehousePerms.filter((p) =>
+    [
+      'warehouse.read',
+      'warehouse.inbound.read',
+      'warehouse.outbound.read',
+      'warehouse.stocktake.read',
+      'warehouse.balance.read',
+      'warehouse.balance.export',
+      'warehouse.transaction.read',
+      'warehouse.inbound.export',
+      'warehouse.outbound.export',
+    ].includes(p.code),
+  );
+
+  await grantPerms(warehouseRole.id, warehousePerms);
+  await grantPerms(procurementRole.id, procurementWarehouse);
+  await grantPerms(pmRole.id, pmWarehouse);
+  await grantPerms(bossRole.id, warehouseReadExport);
 
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
@@ -594,6 +649,81 @@ async function main() {
       },
     },
   });
+
+  const demoWarehouse = await prisma.warehouse.upsert({
+    where: { code: 'WH-DEMO-DLA' },
+    update: {
+      name: '杜阿拉主仓',
+      projectId: demoProject.id,
+      address: 'Douala Industrial Zone',
+      status: 'active',
+    },
+    create: {
+      code: 'WH-DEMO-DLA',
+      name: '杜阿拉主仓',
+      projectId: demoProject.id,
+      address: 'Douala Industrial Zone',
+      status: 'active',
+    },
+  });
+
+  const demoInbound = await prisma.stockInbound.upsert({
+    where: { code: 'IN-DEMO-001' },
+    update: {
+      warehouseId: demoWarehouse.id,
+      projectId: demoProject.id,
+      type: 'purchase',
+      status: 'confirmed',
+      inboundAt: new Date(),
+    },
+    create: {
+      code: 'IN-DEMO-001',
+      warehouseId: demoWarehouse.id,
+      projectId: demoProject.id,
+      type: 'purchase',
+      status: 'confirmed',
+      inboundAt: new Date(),
+      remark: '镀锌钢管采购入库',
+      items: {
+        create: [
+          {
+            materialId: pipeMaterial.id,
+            quantity: 80,
+            unit: '米',
+          },
+        ],
+      },
+    },
+    include: { items: true },
+  });
+
+  await prisma.stockBalance.upsert({
+    where: {
+      warehouseId_materialId_projectId: {
+        warehouseId: demoWarehouse.id,
+        materialId: pipeMaterial.id,
+        projectId: demoProject.id,
+      },
+    },
+    update: { quantity: 80 },
+    create: {
+      warehouseId: demoWarehouse.id,
+      materialId: pipeMaterial.id,
+      projectId: demoProject.id,
+      quantity: 80,
+    },
+  });
+
+  if (!demoInbound.items.length) {
+    await prisma.stockItem.create({
+      data: {
+        inboundId: demoInbound.id,
+        materialId: pipeMaterial.id,
+        quantity: 80,
+        unit: '米',
+      },
+    });
+  }
 
   const fixStats = await fixTextContent(prisma);
   const fixedCount = fixStats.reduce((sum, item) => sum + item.fixed, 0);

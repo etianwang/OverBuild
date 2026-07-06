@@ -1208,3 +1208,158 @@ export async function exportSuppliers(q?: string) {
     'suppliers',
   );
 }
+
+// ── Warehouse ──
+
+export interface WarehouseItem {
+  id: string;
+  code: string;
+  name: string;
+  projectId: string;
+  address?: string | null;
+  status: string;
+  project?: { id: string; code: string; name: string };
+}
+
+export interface StockDocumentItem {
+  id: string;
+  code: string;
+  warehouseId: string;
+  projectId: string;
+  type: string;
+  status: string;
+  remark?: string | null;
+  inboundAt?: string | null;
+  outboundAt?: string | null;
+  warehouse?: { id: string; code: string; name: string };
+  project?: { id: string; code: string; name: string };
+  items?: Array<{
+    id: string;
+    materialId: string;
+    quantity: number;
+    unit: string;
+    material?: { id: string; code: string; name: string; unit: string };
+  }>;
+}
+
+export interface StockBalanceItem {
+  id: string;
+  warehouseId: string;
+  materialId: string;
+  projectId: string;
+  quantity: number;
+  warehouse?: { id: string; code: string; name: string };
+  material?: { id: string; code: string; name: string; unit: string };
+  project?: { id: string; code: string; name: string };
+}
+
+export async function listWarehouses(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  return apiFetch<Paginated<WarehouseItem>>(`/warehouse/warehouses?${search}`);
+}
+
+export async function createWarehouse(data: {
+  code: string;
+  name: string;
+  projectId: string;
+  address?: string;
+}) {
+  return apiFetch<WarehouseItem>('/warehouse/warehouses', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listInbounds(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  return apiFetch<Paginated<StockDocumentItem>>(`/warehouse/inbound?${search}`);
+}
+
+export async function createInbound(data: {
+  code: string;
+  warehouseId: string;
+  projectId: string;
+  type: string;
+  remark?: string;
+  items: Array<{ materialId: string; quantity: number; unit: string }>;
+}) {
+  return apiFetch<StockDocumentItem>('/warehouse/inbound', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function confirmInbound(id: string) {
+  return apiFetch<StockDocumentItem>(`/warehouse/inbound/${id}/confirm`, {
+    method: 'POST',
+  });
+}
+
+export async function listOutbounds(params?: {
+  page?: number;
+  pageSize?: number;
+  projectId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.projectId) search.set('projectId', params.projectId);
+  return apiFetch<Paginated<StockDocumentItem>>(`/warehouse/outbound?${search}`);
+}
+
+export async function createOutbound(data: {
+  code: string;
+  warehouseId: string;
+  projectId: string;
+  type: string;
+  items: Array<{ materialId: string; quantity: number; unit: string }>;
+}) {
+  return apiFetch<StockDocumentItem>('/warehouse/outbound', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function confirmOutbound(id: string) {
+  return apiFetch<StockDocumentItem>(`/warehouse/outbound/${id}/confirm`, {
+    method: 'POST',
+  });
+}
+
+export async function listStockBalances(params?: {
+  page?: number;
+  pageSize?: number;
+  projectId?: string;
+  warehouseId?: string;
+  q?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.warehouseId) search.set('warehouseId', params.warehouseId);
+  if (params?.q) search.set('q', params.q);
+  return apiFetch<Paginated<StockBalanceItem>>(`/warehouse/stock-balances?${search}`);
+}

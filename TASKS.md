@@ -192,12 +192,13 @@ npm run test:e2e    # E2E 通过
 
 ### 8. 仓库 (warehouse)
 
-- [ ] 读文档：`docs/modules/warehouse.md`
-- [ ] 数据库：`warehouses`、`stock_inbound`、`stock_outbound`、`stock_balances`、`stock_transactions`
-- [ ] API：仓库、入库、出库、盘点、库存查询
-- [ ] 前端：入库/出库单、库存报表
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/warehouse.md`
+- [x] 数据库：`warehouses`、`stock_inbound`、`stock_outbound`、`stock_balances`、`stock_transactions`
+- [x] API：仓库、入库、出库、盘点、库存查询
+- [x] 前端：入库/出库单、库存报表
+- [x] 测试：warehouse.service.spec.ts、warehouse.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 9. 合同 (contract)
 
@@ -312,9 +313,10 @@ graph TD
 | C | workflow | ✅ 完成 |
 | D | material | ✅ 完成 |
 | D | procurement | ✅ 完成 |
-| D–G | warehouse → dashboard | 未开始 |
+| D | warehouse | ✅ 完成 |
+| E–G | contract → dashboard | 未开始 |
 
-**下一步**：**模块 8 warehouse（仓库）**
+**下一步**：**模块 9 contract（合同）**
 
 ---
 
