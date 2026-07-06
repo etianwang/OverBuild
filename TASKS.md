@@ -162,12 +162,13 @@ npm run test:e2e    # E2E 通过
 
 ### 5. 审批 (workflow)
 
-- [ ] 读文档：`docs/modules/workflow.md`
-- [ ] 数据库：`approval_instances`、`approval_records`、`approval_templates`
-- [ ] API：审批提交/通过/驳回、待办/已办/我发起的
-- [ ] 前端：待办列表、审批详情、审批操作
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/workflow.md`
+- [x] 数据库：`approval_instances`、`approval_records`、`approval_templates`、`notifications`
+- [x] API：审批提交/通过/驳回、待办/已办/我发起的
+- [x] 前端：待办列表、审批详情、审批操作
+- [x] 测试：workflow.service.spec.ts、workflow.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 6. 材料 (material)
 
@@ -306,10 +307,10 @@ graph TD
 | A | audit-log | ✅ 完成 |
 | A | settings | ✅ 完成 |
 | B | project | ✅ 完成 |
-| C | workflow | ⬜ **下一项** |
+| C | workflow | ✅ 完成 |
 | D–G | material → dashboard | 未开始 |
 
-**下一步**：**模块 5 workflow（审批）**
+**下一步**：**模块 6 material（材料）**
 
 ---
 

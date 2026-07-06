@@ -32,6 +32,8 @@ const PERMISSIONS = [
   { code: 'project.member.manage', name: '项目成员管理', module: 'project' },
   { code: 'project.milestone.manage', name: '里程碑管理', module: 'project' },
   { code: 'project.task.manage', name: '施工内容管理', module: 'project' },
+  { code: 'workflow.approve', name: '审批处理', module: 'workflow' },
+  { code: 'workflow.template.manage', name: '审批模板管理', module: 'workflow' },
 ];
 
 async function main() {
@@ -103,6 +105,13 @@ async function main() {
   const pmRole = await prisma.role.findUniqueOrThrow({
     where: { code: 'project_manager' },
   });
+  const financeRole = await prisma.role.findUniqueOrThrow({
+    where: { code: 'finance' },
+  });
+
+  const workflowApprove = await prisma.permission.findUniqueOrThrow({
+    where: { code: 'workflow.approve' },
+  });
 
   const projectRead = await prisma.permission.findUniqueOrThrow({
     where: { code: 'project.read' },
@@ -140,6 +149,48 @@ async function main() {
     });
   }
 
+  for (const role of [bossRole, pmRole, financeRole]) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: role.id,
+          permissionId: workflowApprove.id,
+        },
+      },
+      update: {},
+      create: { roleId: role.id, permissionId: workflowApprove.id },
+    });
+  }
+
+  const passwordHashDemo = await bcrypt.hash('demo123', 10);
+  const demoUsers = [
+    { username: 'pm', name: '项目经理张三', role: pmRole },
+    { username: 'finance', name: '财务李四', role: financeRole },
+    { username: 'boss', name: '老板王五', role: bossRole },
+  ];
+
+  for (const demo of demoUsers) {
+    const user = await prisma.user.upsert({
+      where: { username: demo.username },
+      update: {},
+      create: {
+        username: demo.username,
+        passwordHash: passwordHashDemo,
+        name: demo.name,
+        locale: Locale.zh,
+        status: UserStatus.active,
+      },
+    });
+    const existing = await prisma.userRole.findFirst({
+      where: { userId: user.id, roleId: demo.role.id, projectId: null },
+    });
+    if (!existing) {
+      await prisma.userRole.create({
+        data: { userId: user.id, roleId: demo.role.id },
+      });
+    }
+  }
+
   await prisma.systemSetting.upsert({
     where: { key: 'app.name' },
     update: {},
@@ -163,6 +214,8 @@ async function main() {
     });
   }
 
+  const pmUser = await prisma.user.findUniqueOrThrow({ where: { username: 'pm' } });
+
   await prisma.project.upsert({
     where: { code: 'PRJ-DEMO-001' },
     update: {
@@ -171,6 +224,7 @@ async function main() {
       location: 'Douala, Cameroun',
       description: '示例项目：中法双语名称，用于验证 UTF-8 显示。',
       status: ProjectStatus.active,
+      managerId: pmUser.id,
     },
     create: {
       code: 'PRJ-DEMO-001',
@@ -179,9 +233,66 @@ async function main() {
       location: 'Douala, Cameroun',
       description: '示例项目：中法双语名称，用于验证 UTF-8 显示。',
       status: ProjectStatus.active,
-      managerId: adminUser.id,
+      managerId: pmUser.id,
     },
   });
+
+  const approvalTemplates = [
+    {
+      type: 'purchase_request' as const,
+      name: '采购申请审批',
+      nodes: [{ node: 1, role: 'project_manager' }],
+    },
+    {
+      type: 'payment' as const,
+      name: '付款审批',
+      nodes: [
+        { node: 1, role: 'finance' },
+        { node: 2, role: 'boss', condition: 'amount_over_limit' },
+      ],
+    },
+    {
+      type: 'reimbursement' as const,
+      name: '报销审批',
+      nodes: [
+        { node: 1, role: 'project_manager' },
+        { node: 2, role: 'finance' },
+      ],
+    },
+    {
+      type: 'contract' as const,
+      name: '合同签订审批',
+      nodes: [
+        { node: 1, role: 'project_manager' },
+        { node: 2, role: 'finance' },
+        { node: 3, role: 'boss' },
+      ],
+    },
+    {
+      type: 'drawing' as const,
+      name: '图纸发布审批',
+      nodes: [
+        { node: 1, role: 'engineer' },
+        { node: 2, role: 'project_manager' },
+      ],
+    },
+  ];
+
+  for (const tpl of approvalTemplates) {
+    const existing = await prisma.approvalTemplate.findFirst({
+      where: { type: tpl.type, isActive: true },
+    });
+    if (!existing) {
+      await prisma.approvalTemplate.create({
+        data: {
+          type: tpl.type,
+          name: tpl.name,
+          nodes: tpl.nodes,
+          isActive: true,
+        },
+      });
+    }
+  }
 
   const fixStats = await fixTextContent(prisma);
   const fixedCount = fixStats.reduce((sum, item) => sum + item.fixed, 0);
@@ -189,7 +300,9 @@ async function main() {
     console.log(`Repaired ${fixedCount} corrupted text field(s).`);
   }
 
-  console.log('Seed completed. Default admin: admin / admin123');
+  console.log(
+    'Seed completed. Default admin: admin / admin123; demo users: pm/finance/boss / demo123',
+  );
 }
 
 main()

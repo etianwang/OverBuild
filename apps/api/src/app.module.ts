@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { ProjectModule } from './modules/project/project.module';
+import { WorkflowModule } from './modules/workflow/workflow.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -15,6 +16,7 @@ import { HealthController } from './health.controller';
     AuthModule,
     SettingsModule,
     ProjectModule,
+    WorkflowModule,
   ],
   controllers: [HealthController],
 })

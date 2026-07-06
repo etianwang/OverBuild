@@ -537,3 +537,182 @@ export async function exportAuditLogs(params?: {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+export interface ApprovalItem {
+  id: string;
+  code: string;
+  type: string;
+  businessId: string;
+  projectId?: string | null;
+  initiatorId: string;
+  status: string;
+  currentNode: number;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+  currentApproverId?: string | null;
+  initiator?: { id: string; name: string; username: string; email?: string | null };
+  project?: { id: string; code: string; name: string } | null;
+  records?: Array<{
+    id: string;
+    node: number;
+    action: string;
+    comment?: string | null;
+    actedAt: string;
+    approver: { id: string; name: string; username: string };
+  }>;
+}
+
+const APPROVAL_TYPE_LABEL: Record<string, string> = {
+  purchase_request: '采购申请',
+  payment: '付款',
+  reimbursement: '报销',
+  contract: '合同签订',
+  drawing: '图纸发布',
+};
+
+export function approvalTypeLabel(type: string) {
+  return APPROVAL_TYPE_LABEL[type] ?? type;
+}
+
+const APPROVAL_STATUS_LABEL: Record<string, string> = {
+  pending: '待审批',
+  approved: '已通过',
+  rejected: '已驳回',
+  cancelled: '已撤回',
+};
+
+export function approvalStatusLabel(status: string) {
+  return APPROVAL_STATUS_LABEL[status] ?? status;
+}
+
+export async function listApprovals(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  type?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.type) search.set('type', params.type);
+  if (params?.status) search.set('status', params.status);
+  return apiFetch<Paginated<ApprovalItem>>(`/workflow/approvals?${search}`);
+}
+
+export async function listApprovalTodo(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  return apiFetch<Paginated<ApprovalItem>>(`/workflow/approvals/todo?${search}`);
+}
+
+export async function listApprovalDone(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  return apiFetch<Paginated<ApprovalItem>>(`/workflow/approvals/done?${search}`);
+}
+
+export async function listApprovalInitiated(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  type?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.type) search.set('type', params.type);
+  if (params?.status) search.set('status', params.status);
+  return apiFetch<Paginated<ApprovalItem>>(`/workflow/approvals/initiated?${search}`);
+}
+
+export async function getApproval(id: string) {
+  return apiFetch<ApprovalItem>(`/workflow/approvals/${id}`);
+}
+
+export async function createApproval(data: {
+  type: string;
+  businessId: string;
+  projectId?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  return apiFetch<ApprovalItem>('/workflow/approvals', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function approveApproval(id: string, comment?: string) {
+  return apiFetch<ApprovalItem>(`/workflow/approvals/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  });
+}
+
+export async function rejectApproval(id: string, comment?: string) {
+  return apiFetch<ApprovalItem>(`/workflow/approvals/${id}/reject`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  });
+}
+
+export async function cancelApproval(id: string) {
+  return apiFetch<ApprovalItem>(`/workflow/approvals/${id}/cancel`, {
+    method: 'POST',
+  });
+}
+
+export async function exportApprovals(params?: {
+  q?: string;
+  type?: string;
+  status?: string;
+  scope?: 'all' | 'initiated';
+}) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const search = new URLSearchParams();
+  if (params?.q) search.set('q', params.q);
+  if (params?.type) search.set('type', params.type);
+  if (params?.status) search.set('status', params.status);
+  if (params?.scope) search.set('scope', params.scope);
+
+  const res = await fetch(`${API_URL}/workflow/approvals/export?${search}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  if (!res.ok) {
+    throw new Error('导出失败');
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition');
+  const match = disposition?.match(/filename="(.+)"/);
+  const filename = match?.[1] ?? `approvals-${Date.now()}.csv`;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
