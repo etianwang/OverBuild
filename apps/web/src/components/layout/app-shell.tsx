@@ -13,6 +13,7 @@ const NAV = [
   { href: '/dashboard', label: 'Dashboard', permission: null },
   { href: '/projects', label: '项目', permission: 'project.read' },
   { href: '/materials', label: '材料', permission: 'material.read' },
+  { href: '/procurement', label: '采购', permission: 'procurement.request.read' },
   { href: '/approvals', label: '审批', permission: null },
   { href: '/users', label: '用户', permission: 'auth.user.read' },
   { href: '/audit-logs', label: '审计日志', permission: 'audit.read' },

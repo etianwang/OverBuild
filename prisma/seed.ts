@@ -41,6 +41,25 @@ const PERMISSIONS = [
   { code: 'material.import', name: '导入材料', module: 'material' },
   { code: 'material.export', name: '导出材料', module: 'material' },
   { code: 'material.category.manage', name: '材料分类管理', module: 'material' },
+  { code: 'procurement.request.read', name: '查看采购申请', module: 'procurement' },
+  { code: 'procurement.request.create', name: '创建采购申请', module: 'procurement' },
+  { code: 'procurement.request.update', name: '编辑采购申请', module: 'procurement' },
+  { code: 'procurement.request.submit', name: '提交采购申请', module: 'procurement' },
+  { code: 'procurement.request.export', name: '导出采购申请', module: 'procurement' },
+  { code: 'procurement.order.read', name: '查看采购订单', module: 'procurement' },
+  { code: 'procurement.order.create', name: '创建采购订单', module: 'procurement' },
+  { code: 'procurement.order.update', name: '编辑采购订单', module: 'procurement' },
+  { code: 'procurement.order.confirm', name: '确认采购订单', module: 'procurement' },
+  { code: 'procurement.order.receive', name: '采购到货确认', module: 'procurement' },
+  { code: 'procurement.order.export', name: '导出采购订单', module: 'procurement' },
+  { code: 'procurement.supplier.read', name: '查看供应商', module: 'procurement' },
+  { code: 'procurement.supplier.create', name: '新增供应商', module: 'procurement' },
+  { code: 'procurement.supplier.update', name: '编辑供应商', module: 'procurement' },
+  { code: 'procurement.supplier.delete', name: '删除供应商', module: 'procurement' },
+  { code: 'procurement.supplier.export', name: '导出供应商', module: 'procurement' },
+  { code: 'procurement.quotation.read', name: '查看询价', module: 'procurement' },
+  { code: 'procurement.quotation.create', name: '创建询价', module: 'procurement' },
+  { code: 'procurement.quotation.update', name: '更新询价', module: 'procurement' },
 ];
 
 async function main() {
@@ -204,6 +223,30 @@ async function main() {
   for (const role of [bossRole, pmRole]) {
     await grantPerms(role.id, materialReadExport);
   }
+
+  const procurementPerms = await prisma.permission.findMany({
+    where: { module: 'procurement' },
+  });
+  const procurementFull = procurementPerms;
+  const procurementReadExport = procurementPerms.filter((p) =>
+    p.code.endsWith('.read') || p.code.endsWith('.export'),
+  );
+  const pmProcurement = procurementPerms.filter((p) =>
+    [
+      'procurement.request.read',
+      'procurement.request.create',
+      'procurement.request.export',
+      'procurement.order.read',
+      'procurement.order.export',
+      'procurement.supplier.read',
+      'procurement.quotation.read',
+    ].includes(p.code),
+  );
+
+  await grantPerms(procurementRole.id, procurementFull);
+  await grantPerms(pmRole.id, pmProcurement);
+  await grantPerms(bossRole.id, procurementReadExport);
+  await grantPerms(financeRole.id, procurementReadExport);
 
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
@@ -460,6 +503,97 @@ async function main() {
       });
     }
   }
+
+  const procurementUser = await prisma.user.findUniqueOrThrow({
+    where: { username: 'procurement' },
+  });
+
+  const demoSupplier = await prisma.supplier.upsert({
+    where: { code: 'SUP-DEMO-001' },
+    update: { name: '喀麦隆建材有限公司', contact: 'Jean', phone: '+237-600-0001' },
+    create: {
+      code: 'SUP-DEMO-001',
+      name: '喀麦隆建材有限公司',
+      contact: 'Jean',
+      phone: '+237-600-0001',
+      email: 'sales@demo-supplier.local',
+      address: 'Douala, Cameroun',
+    },
+  });
+
+  const pipeMaterial = await prisma.material.findFirstOrThrow({
+    where: { projectId: demoProject.id, code: 'MAT-DEMO-001' },
+  });
+
+  const demoRequest = await prisma.purchaseRequest.upsert({
+    where: { code: 'PR-DEMO-001' },
+    update: {
+      status: 'approved',
+      projectId: demoProject.id,
+      requesterId: procurementUser.id,
+    },
+    create: {
+      code: 'PR-DEMO-001',
+      projectId: demoProject.id,
+      requesterId: procurementUser.id,
+      status: 'approved',
+      remark: '镀锌钢管补货申请（已审批）',
+      items: {
+        create: [
+          {
+            materialId: pipeMaterial.id,
+            quantity: 500,
+            unit: '米',
+          },
+        ],
+      },
+    },
+    include: { items: true },
+  });
+
+  if (!demoRequest.items.length) {
+    await prisma.purchaseRequestItem.create({
+      data: {
+        requestId: demoRequest.id,
+        materialId: pipeMaterial.id,
+        quantity: 500,
+        unit: '米',
+      },
+    });
+  }
+
+  await prisma.purchaseOrder.upsert({
+    where: { code: 'PO-DEMO-001' },
+    update: {
+      projectId: demoProject.id,
+      supplierId: demoSupplier.id,
+      requestId: demoRequest.id,
+      totalAmount: 22750,
+      totalCurrency: 'CNY',
+      status: 'confirmed',
+    },
+    create: {
+      code: 'PO-DEMO-001',
+      projectId: demoProject.id,
+      supplierId: demoSupplier.id,
+      requestId: demoRequest.id,
+      totalAmount: 22750,
+      totalCurrency: 'CNY',
+      status: 'confirmed',
+      orderedAt: new Date(),
+      items: {
+        create: [
+          {
+            materialId: pipeMaterial.id,
+            quantity: 500,
+            unit: '米',
+            unitPriceAmount: 45.5,
+            unitPriceCurrency: 'CNY',
+          },
+        ],
+      },
+    },
+  });
 
   const fixStats = await fixTextContent(prisma);
   const fixedCount = fixStats.reduce((sum, item) => sum + item.fixed, 0);

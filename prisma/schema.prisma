@@ -89,6 +89,29 @@ enum MaterialDiscipline {
   general
 }
 
+enum PurchaseRequestStatus {
+  draft
+  pending
+  approved
+  rejected
+  ordered
+}
+
+enum PurchaseOrderStatus {
+  draft
+  confirmed
+  partial
+  received
+  cancelled
+}
+
+enum QuotationStatus {
+  draft
+  quoted
+  accepted
+  rejected
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -110,6 +133,7 @@ model User {
   initiatedApprovals ApprovalInstance[] @relation("ApprovalInitiator")
   approvalRecords    ApprovalRecord[]   @relation("ApprovalApprover")
   notifications      Notification[]
+  purchaseRequests   PurchaseRequest[] @relation("PurchaseRequester")
 
   @@map("users")
 }
@@ -229,6 +253,8 @@ model Project {
   approvals  ApprovalInstance[]
   stockTransactions StockTransaction[]
   materials  Material[]
+  purchaseRequests PurchaseRequest[]
+  purchaseOrders   PurchaseOrder[]
 
   @@index([status])
   @@index([managerId])
@@ -434,9 +460,13 @@ model Material {
 
   category        MaterialCategory      @relation(fields: [categoryId], references: [id])
   project         Project               @relation(fields: [projectId], references: [id])
+  supplier        Supplier?             @relation(fields: [supplierId], references: [id], onDelete: SetNull)
   priceHistory    MaterialPriceHistory[]
   qrcode          MaterialQrcode?
   stockTransactions StockTransaction[]
+  purchaseRequestItems PurchaseRequestItem[]
+  purchaseOrderItems   PurchaseOrderItem[]
+  quotations           Quotation[]
 
   @@unique([projectId, code])
   @@index([categoryId])
@@ -491,4 +521,125 @@ model StockTransaction {
   @@index([projectId])
   @@index([createdAt])
   @@map("stock_transactions")
+}
+
+model Supplier {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  contact   String?
+  phone     String?
+  email     String?
+  address   String?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  materials      Material[]
+  purchaseOrders PurchaseOrder[]
+  quotations     Quotation[]
+
+  @@index([name])
+  @@map("suppliers")
+}
+
+model PurchaseRequest {
+  id          String                @id @default(uuid())
+  code        String                @unique
+  projectId   String                @map("project_id")
+  requesterId String                @map("requester_id")
+  status      PurchaseRequestStatus @default(draft)
+  remark      String?
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  deletedAt   DateTime?             @map("deleted_at")
+
+  project    Project               @relation(fields: [projectId], references: [id])
+  requester  User                  @relation("PurchaseRequester", fields: [requesterId], references: [id])
+  items      PurchaseRequestItem[]
+  orders     PurchaseOrder[]
+  quotations Quotation[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([requesterId])
+  @@map("purchase_requests")
+}
+
+model PurchaseRequestItem {
+  id         String  @id @default(uuid())
+  requestId  String  @map("request_id")
+  materialId String  @map("material_id")
+  quantity   Decimal @db.Decimal(18, 4)
+  unit       String
+
+  request  PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  material Material        @relation(fields: [materialId], references: [id])
+
+  @@index([requestId])
+  @@map("purchase_request_items")
+}
+
+model PurchaseOrder {
+  id            String              @id @default(uuid())
+  code          String              @unique
+  projectId     String              @map("project_id")
+  supplierId    String              @map("supplier_id")
+  requestId     String?             @map("request_id")
+  totalAmount   Decimal             @map("total_amount") @db.Decimal(18, 4)
+  totalCurrency String              @map("total_currency") @db.Char(3)
+  status        PurchaseOrderStatus @default(draft)
+  orderedAt     DateTime?           @map("ordered_at")
+  createdAt     DateTime            @default(now()) @map("created_at")
+  updatedAt     DateTime            @updatedAt @map("updated_at")
+  deletedAt     DateTime?           @map("deleted_at")
+
+  project  Project          @relation(fields: [projectId], references: [id])
+  supplier Supplier         @relation(fields: [supplierId], references: [id])
+  request  PurchaseRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  items    PurchaseOrderItem[]
+
+  @@index([projectId])
+  @@index([supplierId])
+  @@index([status])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id                String  @id @default(uuid())
+  orderId           String  @map("order_id")
+  materialId        String  @map("material_id")
+  quantity          Decimal @db.Decimal(18, 4)
+  unit              String
+  unitPriceAmount   Decimal @map("unit_price_amount") @db.Decimal(18, 4)
+  unitPriceCurrency String  @map("unit_price_currency") @db.Char(3)
+
+  order    PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  material Material      @relation(fields: [materialId], references: [id])
+
+  @@index([orderId])
+  @@map("purchase_order_items")
+}
+
+model Quotation {
+  id         String          @id @default(uuid())
+  code       String          @unique
+  supplierId String          @map("supplier_id")
+  requestId  String?         @map("request_id")
+  materialId String?         @map("material_id")
+  amount     Decimal         @db.Decimal(18, 4)
+  currency   String          @db.Char(3)
+  status     QuotationStatus @default(draft)
+  remark     String?
+  quotedAt   DateTime?       @map("quoted_at")
+  createdAt  DateTime        @default(now()) @map("created_at")
+  updatedAt  DateTime        @updatedAt @map("updated_at")
+
+  supplier Supplier         @relation(fields: [supplierId], references: [id])
+  request  PurchaseRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
+  material Material?        @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  @@index([supplierId])
+  @@index([requestId])
+  @@map("quotations")
 }

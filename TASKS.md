@@ -182,12 +182,13 @@ npm run test:e2e    # E2E 通过
 
 ### 7. 采购 (procurement)
 
-- [ ] 读文档：`docs/modules/procurement.md`
-- [ ] 数据库：`purchase_requests`、`purchase_orders`、`suppliers`、`quotations`
-- [ ] API：采购申请、订单、供应商、询价、审批提交
-- [ ] 前端：采购申请、订单、供应商管理
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/procurement.md`
+- [x] 数据库：`purchase_requests`、`purchase_orders`、`suppliers`、`quotations`
+- [x] API：采购申请、订单、供应商、询价、审批提交
+- [x] 前端：采购申请、订单、供应商管理
+- [x] 测试：procurement.service.spec.ts、procurement.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 8. 仓库 (warehouse)
 
@@ -310,9 +311,10 @@ graph TD
 | B | project | ✅ 完成 |
 | C | workflow | ✅ 完成 |
 | D | material | ✅ 完成 |
-| D–G | procurement → dashboard | 未开始 |
+| D | procurement | ✅ 完成 |
+| D–G | warehouse → dashboard | 未开始 |
 
-**下一步**：**模块 7 procurement（采购）**
+**下一步**：**模块 8 warehouse（仓库）**
 
 ---
 

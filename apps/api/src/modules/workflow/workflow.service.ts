@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import {
   ApprovalRecordAction,
@@ -27,12 +29,15 @@ import {
   ApprovalTemplateNode,
   PAYMENT_AMOUNT_LIMIT,
 } from './workflow.types';
+import { ProcurementService } from '../procurement/procurement.service';
 
 @Injectable()
 export class WorkflowService {
   constructor(
     private readonly workflowRepository: WorkflowRepository,
     private readonly auditLogService: AuditLogService,
+    @Inject(forwardRef(() => ProcurementService))
+    private readonly procurementService: ProcurementService,
   ) {}
 
   private isAdmin(user: AuthUser) {
@@ -448,6 +453,12 @@ export class WorkflowService {
         status: ApprovalStatus.approved,
       });
       await this.notifyInitiator(updated.initiatorId, updated);
+      if (instance.type === ApprovalType.purchase_request) {
+        await this.procurementService.syncRequestApproval(
+          instance.businessId,
+          'approved',
+        );
+      }
     } else {
       const nextNode = nodes[currentIndex + 1];
       updated = await this.workflowRepository.updateInstance(instance.id, {
@@ -496,6 +507,13 @@ export class WorkflowService {
     const updated = await this.workflowRepository.updateInstance(instance.id, {
       status: ApprovalStatus.rejected,
     });
+
+    if (instance.type === ApprovalType.purchase_request) {
+      await this.procurementService.syncRequestApproval(
+        instance.businessId,
+        'rejected',
+      );
+    }
 
     await this.notifyInitiator(updated.initiatorId, updated);
 

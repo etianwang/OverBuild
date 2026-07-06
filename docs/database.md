@@ -140,6 +140,7 @@ npm run db:seed        # 同步种子数据并再次扫描
 | 2026-07-06 | workflow_approval | approval_instances, approval_records, approval_templates, notifications |
 | 2026-07-06 | material | materials, material_categories, material_price_history, material_qrcodes, stock_transactions |
 | 2026-07-06 | material_project_discipline | project_id, storage_location, category discipline |
+| 2026-07-06 | procurement | purchase_requests, purchase_orders, suppliers, quotations |
 
 ---
 

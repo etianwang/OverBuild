@@ -322,7 +322,9 @@ export class MaterialService {
       purchasePriceAmount: dto.purchasePrice?.amount,
       purchasePriceCurrency: dto.purchasePrice?.currency.toUpperCase(),
       imageUrl: dto.imageUrl,
-      supplierId: dto.supplierId,
+      ...(dto.supplierId
+        ? { supplier: { connect: { id: dto.supplierId } } }
+        : {}),
     });
 
     if (dto.purchasePrice) {
@@ -415,7 +417,11 @@ export class MaterialService {
           }
         : {}),
       ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
-      ...(dto.supplierId !== undefined ? { supplierId: dto.supplierId } : {}),
+      ...(dto.supplierId !== undefined
+        ? dto.supplierId
+          ? { supplier: { connect: { id: dto.supplierId } } }
+          : { supplier: { disconnect: true } }
+        : {}),
     });
 
     if (priceChanged && dto.purchasePrice) {

@@ -925,3 +925,286 @@ export async function getMaterialQrcode(id: string) {
     qrcodeUrl: string;
   }>(`/materials/${id}/qrcode`);
 }
+
+// ── Procurement ──
+
+export const PURCHASE_REQUEST_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  pending: '审批中',
+  approved: '已批准',
+  rejected: '已驳回',
+  ordered: '已下单',
+};
+
+export const PURCHASE_ORDER_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  confirmed: '已确认',
+  partial: '部分到货',
+  received: '已到货',
+  cancelled: '已取消',
+};
+
+export interface SupplierItem {
+  id: string;
+  code: string;
+  name: string;
+  contact?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+}
+
+export interface PurchaseRequestItem {
+  id: string;
+  code: string;
+  projectId: string;
+  requesterId: string;
+  status: string;
+  remark?: string | null;
+  project?: { id: string; code: string; name: string };
+  requester?: { id: string; name: string };
+  items?: Array<{
+    id: string;
+    materialId: string;
+    quantity: number;
+    unit: string;
+    material?: { id: string; code: string; name: string; unit: string };
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  code: string;
+  projectId: string;
+  supplierId: string;
+  requestId?: string | null;
+  totalAmount: MoneyValue;
+  status: string;
+  orderedAt?: string | null;
+  project?: { id: string; code: string; name: string };
+  supplier?: { id: string; code: string; name: string };
+  request?: { id: string; code: string; status: string } | null;
+  items?: Array<{
+    id: string;
+    materialId: string;
+    quantity: number;
+    unit: string;
+    unitPrice: MoneyValue;
+    material?: { id: string; code: string; name: string; unit: string };
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuotationItem {
+  id: string;
+  code: string;
+  supplierId: string;
+  requestId?: string | null;
+  materialId?: string | null;
+  status: string;
+  remark?: string | null;
+  price: MoneyValue;
+  supplier?: { id: string; code: string; name: string };
+  request?: { id: string; code: string } | null;
+  material?: { id: string; code: string; name: string } | null;
+  quotedAt?: string | null;
+  createdAt: string;
+}
+
+export async function listPurchaseRequests(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.status) search.set('status', params.status);
+  return apiFetch<Paginated<PurchaseRequestItem>>(
+    `/procurement/purchase-requests?${search}`,
+  );
+}
+
+export async function createPurchaseRequest(data: {
+  code: string;
+  projectId: string;
+  remark?: string;
+  items: Array<{ materialId: string; quantity: number; unit: string }>;
+}) {
+  return apiFetch<PurchaseRequestItem>('/procurement/purchase-requests', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function submitPurchaseRequest(id: string) {
+  return apiFetch<PurchaseRequestItem>(
+    `/procurement/purchase-requests/${id}/submit`,
+    { method: 'POST' },
+  );
+}
+
+export async function listPurchaseOrders(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.status) search.set('status', params.status);
+  return apiFetch<Paginated<PurchaseOrderItem>>(
+    `/procurement/purchase-orders?${search}`,
+  );
+}
+
+export async function createPurchaseOrder(data: {
+  code: string;
+  projectId: string;
+  supplierId: string;
+  requestId?: string;
+  items: Array<{
+    materialId: string;
+    quantity: number;
+    unit: string;
+    unitPrice: MoneyValue;
+  }>;
+}) {
+  return apiFetch<PurchaseOrderItem>('/procurement/purchase-orders', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function receivePurchaseOrder(id: string) {
+  return apiFetch<PurchaseOrderItem>(`/procurement/purchase-orders/${id}/receive`, {
+    method: 'PUT',
+  });
+}
+
+export async function listSuppliers(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  return apiFetch<Paginated<SupplierItem>>(`/procurement/suppliers?${search}`);
+}
+
+export async function createSupplier(data: {
+  code: string;
+  name: string;
+  contact?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+}) {
+  return apiFetch<SupplierItem>('/procurement/suppliers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listQuotations(params?: {
+  page?: number;
+  pageSize?: number;
+  requestId?: string;
+  supplierId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.requestId) search.set('requestId', params.requestId);
+  if (params?.supplierId) search.set('supplierId', params.supplierId);
+  return apiFetch<Paginated<QuotationItem>>(`/procurement/quotations?${search}`);
+}
+
+export async function createQuotation(data: {
+  code: string;
+  supplierId: string;
+  requestId?: string;
+  materialId?: string;
+  price: MoneyValue;
+  remark?: string;
+}) {
+  return apiFetch<QuotationItem>('/procurement/quotations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+async function exportProcurementCsv(path: string, filenamePrefix: string) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('导出失败');
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition');
+  const match = disposition?.match(/filename="(.+)"/);
+  const filename = match?.[1] ?? `${filenamePrefix}-${Date.now()}.csv`;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function exportPurchaseRequests(params?: {
+  q?: string;
+  projectId?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams();
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.status) search.set('status', params.status);
+  await exportProcurementCsv(
+    `/procurement/purchase-requests/export?${search}`,
+    'purchase-requests',
+  );
+}
+
+export async function exportPurchaseOrders(params?: {
+  q?: string;
+  projectId?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams();
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.status) search.set('status', params.status);
+  await exportProcurementCsv(
+    `/procurement/purchase-orders/export?${search}`,
+    'purchase-orders',
+  );
+}
+
+export async function exportSuppliers(q?: string) {
+  const search = new URLSearchParams();
+  if (q) search.set('q', q);
+  await exportProcurementCsv(
+    `/procurement/suppliers/export?${search}`,
+    'suppliers',
+  );
+}
