@@ -33,16 +33,18 @@
 
 ### CI 自动检查
 
-GitHub Actions 流水线须覆盖验收项 1–3、7–8，合并前全绿：
+GitHub Actions 流水线（[`.github/workflows/ci.yml`](../.github/workflows/ci.yml)）覆盖验收项 1–3、5、7–8，合并前全绿：
 
 ```yaml
-# 流水线步骤（草案）
+# 流水线步骤
+- npm ci
+- prisma generate + migrate deploy（PostgreSQL 16 服务）
 - lint
-- typecheck
-- build
-- test (Vitest)
-- test:e2e (Playwright)
-- prisma migrate deploy (staging)
+- typecheck（api + web）
+- test（Vitest 单元测试）
+- test:e2e（API 集成测试）
+- build（api + web）
+- docker compose config + 构建 api/web 镜像
 ```
 
 ---

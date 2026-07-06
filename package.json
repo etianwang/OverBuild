@@ -24,6 +24,8 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
+    "docker:build": "docker compose build",
+    "test:local": "powershell -ExecutionPolicy Bypass -File scripts/test-local.ps1",
     "docker:init": "npm run docker:up && npm run db:setup"
   },
   "devDependencies": {

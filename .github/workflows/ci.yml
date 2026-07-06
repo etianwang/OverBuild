@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Lint, test, and build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: overbuild
+          POSTGRES_PASSWORD: overbuild
+          POSTGRES_DB: overbuild
+          POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C.UTF-8'
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U overbuild -d overbuild"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://overbuild:overbuild@localhost:5432/overbuild?schema=public&client_encoding=UTF8
+      JWT_SECRET: ci-test-secret
+      JWT_REFRESH_SECRET: ci-test-refresh-secret
+      JWT_EXPIRES_IN: 2h
+      JWT_REFRESH_EXPIRES_IN: 7d
+      REDIS_URL: redis://localhost:6379
+      API_PORT: 3001
+      API_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Validate database migrations
+        run: npx prisma migrate deploy
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck API
+        run: npx tsc --noEmit -p apps/api/tsconfig.json
+
+      - name: Typecheck Web
+        run: npx tsc --noEmit -p apps/web/tsconfig.json
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: API E2E tests
+        run: npm run test:e2e
+
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Docker images
+    runs-on: ubuntu-latest
+    needs: ci
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Compose file
+        run: docker compose config
+
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: false
+          tags: overbuild-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          tags: overbuild-web:ci
+          build-args: |
+            NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

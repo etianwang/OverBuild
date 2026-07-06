@@ -86,15 +86,22 @@
 | **Docker Compose** | 多容器编排（API、Web、PostgreSQL、Redis、Nginx） |
 | **Nginx** | 反向代理、SSL 终止、静态资源 |
 
-### 服务编排（草案）
+### 服务编排
 
 ```yaml
 services:
-  api:      # NestJS
-  web:      # Next.js
-  db:       # PostgreSQL
-  redis:    # Redis
-  nginx:    # 反向代理
+  db:       # PostgreSQL 16（UTF-8）
+  redis:    # Redis 7
+  api:      # NestJS（apps/api/Dockerfile）
+  web:      # Next.js（apps/web/Dockerfile）
+  nginx:    # 反向代理（生产可选）
+```
+
+本地全栈启动：
+
+```bash
+docker compose up -d --build
+# Web: http://localhost:3000  API: http://localhost:3001/api/v1/health
 ```
 
 ---
