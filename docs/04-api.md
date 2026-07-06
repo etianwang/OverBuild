@@ -20,6 +20,7 @@
 - 认证：Bearer Token（JWT）
 - API 文档：Swagger UI（`/api/docs`）
 - 请求/响应格式：JSON（导出除外）
+- **字符集**：JSON 使用 UTF-8；请求头 `Content-Type: application/json; charset=utf-8`
 
 ---
 

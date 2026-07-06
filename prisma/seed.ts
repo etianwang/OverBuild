@@ -1,5 +1,6 @@
-import { PrismaClient, Locale, UserStatus } from '@prisma/client';
+import { PrismaClient, Locale, UserStatus, ProjectStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { fixTextContent } from './lib/fix-text-content';
 
 const prisma = new PrismaClient();
 
@@ -160,6 +161,32 @@ async function main() {
       update: {},
       create: item,
     });
+  }
+
+  await prisma.project.upsert({
+    where: { code: 'PRJ-DEMO-001' },
+    update: {
+      name: '杜阿拉综合楼',
+      nameFr: 'Immeuble Douala',
+      location: 'Douala, Cameroun',
+      description: '示例项目：中法双语名称，用于验证 UTF-8 显示。',
+      status: ProjectStatus.active,
+    },
+    create: {
+      code: 'PRJ-DEMO-001',
+      name: '杜阿拉综合楼',
+      nameFr: 'Immeuble Douala',
+      location: 'Douala, Cameroun',
+      description: '示例项目：中法双语名称，用于验证 UTF-8 显示。',
+      status: ProjectStatus.active,
+      managerId: adminUser.id,
+    },
+  });
+
+  const fixStats = await fixTextContent(prisma);
+  const fixedCount = fixStats.reduce((sum, item) => sum + item.fixed, 0);
+  if (fixedCount > 0) {
+    console.log(`Repaired ${fixedCount} corrupted text field(s).`);
   }
 
   console.log('Seed completed. Default admin: admin / admin123');

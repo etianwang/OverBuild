@@ -37,6 +37,19 @@
 - RBAC 使用 NestJS Guard + 自定义 `PermissionsGuard`
 - API 统一返回 `{ success, data, message }`，见 [04-api.md](./04-api.md)
 - 异步任务（Excel 导出、自动翻译）通过 BullMQ 处理
+- **字符编码**：全栈 UTF-8，见 [00-project.md](./00-project.md#字符编码utf-8)
+
+---
+
+## 字符编码
+
+| 组件 | 约定 |
+|------|------|
+| Node.js / NestJS | 内部 Unicode；HTTP JSON 默认 UTF-8 |
+| Prisma / PostgreSQL | 库 `UTF8`；连接 `client_encoding=UTF8` |
+| Next.js | 源文件 UTF-8；`next/font` 使用支持拉丁扩展的字体 |
+| PowerShell 脚本 | `[Console]::OutputEncoding`、请求体 `UTF8.GetBytes` |
+| CSV / 导出 | `Content-Type: text/csv; charset=utf-8` |
 
 ---
 

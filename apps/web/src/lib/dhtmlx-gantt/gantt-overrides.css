@@ -1,0 +1,41 @@
+/* DHTMLX inline editor fixes: opaque overlay + Tailwind input reset isolation */
+
+.gantt_grid_editor_placeholder {
+  z-index: 5;
+  box-sizing: border-box;
+  overflow: hidden;
+  background-color: #fff;
+}
+
+.gantt_grid_editor_placeholder input,
+.gantt_grid_editor_placeholder textarea,
+.gantt_grid_editor_placeholder select {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 6px;
+  border: 1px solid #cfcfcf;
+  border-radius: 2px;
+  box-sizing: border-box;
+  background-color: #fff;
+  color: #1a1a2e;
+  font: inherit;
+  line-height: normal;
+  outline: none;
+  appearance: auto;
+}
+
+.gantt_grid_editor_placeholder .gantt_date {
+  width: 100%;
+  height: 100%;
+}
+
+.dark .gantt_grid_editor_placeholder,
+.dark .gantt_grid_editor_placeholder input,
+.dark .gantt_grid_editor_placeholder textarea,
+.dark .gantt_grid_editor_placeholder select {
+  background-color: #252540;
+  color: #f1f5f9;
+  border-color: #374151;
+}

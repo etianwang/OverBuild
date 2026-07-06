@@ -1,26 +1,72 @@
 # Project module local acceptance (API)
 $ErrorActionPreference = "Stop"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
+function Invoke-JsonRequest {
+  param(
+    [string]$Method,
+    [string]$Uri,
+    [hashtable]$Headers = @{},
+    [object]$Body
+  )
+
+  $jsonHeaders = @{ "Content-Type" = "application/json; charset=utf-8" }
+  foreach ($key in $Headers.Keys) { $jsonHeaders[$key] = $Headers[$key] }
+
+  $params = @{
+    Method      = $Method
+    Uri         = $Uri
+    Headers     = $jsonHeaders
+    ContentType = "application/json; charset=utf-8"
+  }
+
+  if ($null -ne $Body) {
+    $json = $Body | ConvertTo-Json -Compress -Depth 5
+    $params.Body = [System.Text.Encoding]::UTF8.GetBytes($json)
+  }
+
+  return Invoke-RestMethod @params
+}
+
 $base = "http://localhost:3001/api/v1"
 
-$login = Invoke-RestMethod -Method Post -Uri "$base/auth/login" -ContentType "application/json" -Body '{"username":"admin","password":"admin123"}'
+$login = Invoke-JsonRequest -Method Post -Uri "$base/auth/login" -Body @{
+  username = "admin"
+  password = "admin123"
+}
 $token = $login.data.accessToken
 $adminId = $login.data.user.id
-$h = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+$h = @{ Authorization = "Bearer $token" }
 
 $code = "PRJ-ACPT-" + (Get-Date -Format "HHmmss")
-$body = @{ code = $code; name = "Acceptance Project"; status = "planning"; managerId = $adminId; location = "Douala" } | ConvertTo-Json
-$p = Invoke-RestMethod -Method Post -Uri "$base/projects" -Headers $h -Body $body
+$p = Invoke-JsonRequest -Method Post -Uri "$base/projects" -Headers $h -Body @{
+  code       = $code
+  name       = "验收项目"
+  status     = "planning"
+  managerId  = $adminId
+  location   = "Douala"
+}
 $projectId = $p.data.id
 Write-Output "PASS: 1. create $code -> $projectId"
 
 try {
-  Invoke-RestMethod -Method Post -Uri "$base/projects" -Headers $h -Body $body | Out-Null
+  Invoke-JsonRequest -Method Post -Uri "$base/projects" -Headers $h -Body @{
+    code      = $code
+    name      = "验收项目"
+    status    = "planning"
+    managerId = $adminId
+    location  = "Douala"
+  } | Out-Null
   Write-Output "FAIL: 2. unique code"
 } catch {
   Write-Output "PASS: 2. unique code"
 }
 
-$u = Invoke-RestMethod -Method Put -Uri "$base/projects/$projectId" -Headers $h -Body (@{ name = "Acceptance-Edited"; status = "active" } | ConvertTo-Json)
+$u = Invoke-JsonRequest -Method Put -Uri "$base/projects/$projectId" -Headers $h -Body @{
+  name   = "验收项目-已编辑"
+  status = "active"
+}
 if ($u.data.status -eq "active") { Write-Output "PASS: 3. update" } else { Write-Output "FAIL: 3. update" }
 
 $list = Invoke-RestMethod -Uri "$base/projects?q=$code" -Headers $h
@@ -29,18 +75,26 @@ Write-Output "PASS: 4. search total=$($list.data.total)"
 $detail = Invoke-RestMethod -Uri "$base/projects/$projectId" -Headers $h
 Write-Output "PASS: 5. detail $($detail.data.name)"
 
-$z = Invoke-RestMethod -Method Post -Uri "$base/projects/$projectId/zones" -Headers $h -Body '{"name":"Zone A"}'
+$z = Invoke-JsonRequest -Method Post -Uri "$base/projects/$projectId/zones" -Headers $h -Body @{ name = "A区" }
 $zoneId = $z.data.id
-Invoke-RestMethod -Method Put -Uri "$base/projects/$projectId/zones/$zoneId" -Headers $h -Body '{"name":"Zone A-Edit"}' | Out-Null
+Invoke-JsonRequest -Method Put -Uri "$base/projects/$projectId/zones/$zoneId" -Headers $h -Body @{ name = "A区-改" } | Out-Null
 $zones = Invoke-RestMethod -Uri "$base/projects/$projectId/zones" -Headers $h
 Write-Output "PASS: 6. zones count=$($zones.data.Count)"
 
-$m = Invoke-RestMethod -Method Post -Uri "$base/projects/$projectId/members" -Headers $h -Body (@{ userId = $adminId; role = "engineer" } | ConvertTo-Json)
+$m = Invoke-JsonRequest -Method Post -Uri "$base/projects/$projectId/members" -Headers $h -Body @{
+  userId = $adminId
+  role   = "engineer"
+}
 Write-Output "PASS: 7. member role=$($m.data.role)"
 
-$ms = Invoke-RestMethod -Method Post -Uri "$base/projects/$projectId/milestones" -Headers $h -Body '{"name":"Foundation","dueDate":"2026-12-31"}'
+$ms = Invoke-JsonRequest -Method Post -Uri "$base/projects/$projectId/milestones" -Headers $h -Body @{
+  name    = "基础完工"
+  dueDate = "2026-12-31"
+}
 $msId = $ms.data.id
-Invoke-RestMethod -Method Put -Uri "$base/projects/$projectId/milestones/$msId" -Headers $h -Body '{"status":"completed"}' | Out-Null
+Invoke-JsonRequest -Method Put -Uri "$base/projects/$projectId/milestones/$msId" -Headers $h -Body @{
+  status = "completed"
+} | Out-Null
 Write-Output "PASS: 8. milestone completed"
 
 Invoke-RestMethod -Uri "$base/projects/$projectId/profit" -Headers $h | Out-Null

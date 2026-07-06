@@ -18,6 +18,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:fix-text": "tsx prisma/fix-text-content.ts",
+    "db:check-encoding": "powershell -ExecutionPolicy Bypass -File scripts/check-encoding.ps1",
     "db:setup": "npm run db:generate && npx prisma migrate deploy && npm run db:seed",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

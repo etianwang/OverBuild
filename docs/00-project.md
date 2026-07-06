@@ -23,6 +23,23 @@
 - 法语
 - 英语
 
+## 字符编码（UTF-8）
+
+系统**全链路统一 UTF-8**，确保中文、法语（含 é è ç 等变音符号）、英文无障碍显示与存储。
+
+| 层级 | 要求 |
+|------|------|
+| 数据库 | PostgreSQL `ENCODING 'UTF8'` |
+| 连接 | `DATABASE_URL` 含 `client_encoding=UTF8` |
+| API | JSON 请求/响应 UTF-8；CSV 导出 `charset=utf-8` |
+| 前端 | HTML/JS 源文件 UTF-8；`lang` 按界面语言切换 |
+| 源码与脚本 | 仓库文件、SQL、PowerShell 脚本均保存为 UTF-8 |
+| 用户录入 | 法文字段使用 `name_fr` 等专用列，与中文并列存储 |
+
+**禁止**：在中文 Windows 下使用未声明编码的 GBK 数据库；通过 PowerShell/curl 写入中文时不指定 UTF-8。
+
+建库、修复损坏文本与验收步骤见 [database.md](./database.md#字符编码utf-8) 与 [06-testing.md](./06-testing.md)。
+
 ## 系统约束
 
 | 约束 | 说明 |

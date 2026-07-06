@@ -4,6 +4,50 @@
 
 **数据库变更必须同步更新本文档。**
 
+## 字符编码（UTF-8）
+
+全系统使用 **UTF-8**，支持中文、法语、英文混排与检索。
+
+### 数据库
+
+```sql
+CREATE DATABASE overbuild
+  OWNER overbuild
+  ENCODING 'UTF8'
+  LC_COLLATE 'C'
+  LC_CTYPE 'C'
+  TEMPLATE template0;
+```
+
+Docker Compose 须设置 `POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C.UTF-8"`。
+
+### 连接串
+
+```
+postgresql://overbuild:overbuild@localhost:5432/overbuild?schema=public&client_encoding=UTF8
+```
+
+### 文本字段
+
+- 主显示名：`name`（中文或项目主语言）
+- 法语名：`name_fr`（合同、图纸、材料等模块按需使用）
+- 界面文案：i18n 资源（`zh` / `fr` / `en`），不写入业务表
+
+### 损坏文本修复
+
+因错误编码写入后名称变为 `??????` 的数据**无法自动还原原文**，须：
+
+```bash
+npm run db:fix-text    # 按规则修复已知损坏记录
+npm run db:seed        # 同步种子数据并再次扫描
+```
+
+本地检查数据库编码（Windows PostgreSQL）：
+
+```powershell
+.\scripts\check-encoding.ps1
+```
+
 ## 核心约定
 
 - 所有业务表包含 `created_at`、`updated_at`

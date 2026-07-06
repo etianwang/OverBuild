@@ -47,7 +47,7 @@ try {
 
   if ($dbExists -ne '1') {
     Write-Host 'Creating database overbuild...'
-    & $psql -U postgres -h 127.0.0.1 -v ON_ERROR_STOP=1 -c "CREATE DATABASE overbuild OWNER overbuild;"
+    & $psql -U postgres -h 127.0.0.1 -v ON_ERROR_STOP=1 -c "CREATE DATABASE overbuild OWNER overbuild ENCODING 'UTF8' LC_COLLATE='C' LC_CTYPE='C' TEMPLATE template0;"
   } else {
     Write-Host 'Database overbuild already exists'
   }

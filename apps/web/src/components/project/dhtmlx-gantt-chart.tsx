@@ -17,6 +17,7 @@ import {
   type Task,
 } from 'dhtmlx-gantt';
 import 'dhtmlx-gantt/codebase/dhtmlxgantt.css';
+import '@/lib/dhtmlx-gantt/gantt-overrides.css';
 import type { ProjectTaskItem } from '@/lib/api';
 import {
   createProjectTask,
@@ -29,7 +30,11 @@ import {
   canOutdentTask,
   indentTask,
   outdentTask,
+  resolveSelectedTaskId,
 } from '@/lib/dhtmlx-gantt/indent-outdent';
+import {
+  guardInlineEditorsToDblClick,
+} from '@/lib/dhtmlx-gantt/inline-edit-policy';
 import { mapProjectTasksToGantt } from '@/lib/gantt-mapper';
 import {
   collectGanttTaskOrder,
@@ -135,6 +140,7 @@ export const DhtmlxGanttChart = forwardRef<
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartShellRef = useRef<HTMLDivElement>(null);
   const ganttRef = useRef<GanttStatic | null>(null);
   const reorderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const overviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -182,21 +188,51 @@ export const DhtmlxGanttChart = forwardRef<
     }, 300);
   }, [syncReorder]);
 
-  const refreshWbsState = useCallback((taskId: string | null) => {
+  const refreshWbsState = useCallback((taskId?: string | null) => {
     const gantt = ganttRef.current;
-    if (!gantt || !taskId || !gantt.isTaskExists(taskId)) {
+    if (!gantt) return;
+    const resolved = taskId ?? resolveSelectedTaskId(gantt);
+    setSelectedTaskId(resolved);
+    if (!resolved || !gantt.isTaskExists(resolved)) {
       setWbsState({ canIndent: false, canOutdent: false });
       return;
     }
     setWbsState({
-      canIndent: canIndentTask(gantt, taskId),
-      canOutdent: canOutdentTask(gantt, taskId),
+      canIndent: canIndentTask(gantt, resolved),
+      canOutdent: canOutdentTask(gantt, resolved),
     });
   }, []);
 
-  useEffect(() => {
-    refreshWbsState(selectedTaskId);
-  }, [refreshWbsState, selectedTaskId, tasks]);
+  const focusChart = useCallback(() => {
+    chartShellRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  const handleChartKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (!isInteractive) return;
+      const gantt = ganttRef.current;
+      if (!gantt) return;
+      const taskId = resolveSelectedTaskId(gantt);
+      if (!taskId) return;
+
+      if (event.shiftKey && event.key === 'ArrowRight') {
+        event.preventDefault();
+        if (indentTask(gantt, taskId)) {
+          refreshWbsState(taskId);
+          scheduleReorder();
+        }
+        return;
+      }
+      if (event.shiftKey && event.key === 'ArrowLeft') {
+        event.preventDefault();
+        if (outdentTask(gantt, taskId)) {
+          refreshWbsState(taskId);
+          scheduleReorder();
+        }
+      }
+    },
+    [isInteractive, refreshWbsState, scheduleReorder],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -222,7 +258,7 @@ export const DhtmlxGanttChart = forwardRef<
     gantt.config.fit_tasks = true;
     gantt.config.open_tree_initially = true;
     gantt.config.details_on_create = isInteractive;
-    gantt.config.details_on_dblclick = isInteractive;
+    gantt.config.details_on_dblclick = false;
     gantt.config.drag_move = isInteractive;
     gantt.config.drag_resize = isInteractive;
     gantt.config.drag_progress = isInteractive;
@@ -232,8 +268,9 @@ export const DhtmlxGanttChart = forwardRef<
     gantt.config.order_branch_free = isInteractive;
     gantt.config.reorder_grid_columns = isInteractive;
     gantt.config.keyboard_navigation = isInteractive;
-    gantt.config.keyboard_navigation_cells = isInteractive;
+    gantt.config.keyboard_navigation_cells = false;
     gantt.config.select_task = isInteractive;
+    gantt.config.inline_editors_multiselect_open = false;
 
     gantt.ext.zoom.init({
       levels: GANTT_ZOOM_LEVELS,
@@ -258,6 +295,16 @@ export const DhtmlxGanttChart = forwardRef<
     );
 
     eventIds.push(
+      gantt.attachEvent('onTaskClick', (id) => {
+        const taskId = String(id);
+        setSelectedTaskId(taskId);
+        refreshWbsState(taskId);
+        focusChart();
+        return true;
+      }),
+    );
+
+    eventIds.push(
       gantt.attachEvent('onTaskSelected', (id) => {
         const taskId = String(id);
         setSelectedTaskId(taskId);
@@ -267,9 +314,8 @@ export const DhtmlxGanttChart = forwardRef<
 
     eventIds.push(
       gantt.attachEvent('onTaskUnselected', () => {
-        const lastId = gantt.getLastSelectedTask();
-        if (lastId) {
-          const taskId = String(lastId);
+        const taskId = resolveSelectedTaskId(gantt);
+        if (taskId) {
           setSelectedTaskId(taskId);
           refreshWbsState(taskId);
           return;
@@ -344,6 +390,19 @@ export const DhtmlxGanttChart = forwardRef<
     gantt.init(container);
     gantt.parse({ data: ganttTasks, links });
 
+    let releaseInlineEditPolicy: () => void = () => {};
+    const applyInlineEditPolicy = () => {
+      if (!isInteractive) return;
+      releaseInlineEditPolicy();
+      releaseInlineEditPolicy = guardInlineEditorsToDblClick(gantt);
+    };
+
+    applyInlineEditPolicy();
+    const ganttReadyEventId = gantt.attachEvent('onGanttReady', () => {
+      applyInlineEditPolicy();
+    });
+    eventIds.push(ganttReadyEventId);
+
     const currentLevel = gantt.ext.zoom.getCurrentLevel();
     const levelConfig = GANTT_ZOOM_LEVELS[currentLevel];
     if (levelConfig?.name) setZoomLevelName(levelConfig.name);
@@ -351,6 +410,7 @@ export const DhtmlxGanttChart = forwardRef<
     eventIdsRef.current = eventIds;
 
     return () => {
+      releaseInlineEditPolicy();
       if (reorderTimer.current) clearTimeout(reorderTimer.current);
       if (overviewTimer.current) clearTimeout(overviewTimer.current);
       for (const eventId of eventIdsRef.current) {
@@ -436,84 +496,101 @@ export const DhtmlxGanttChart = forwardRef<
 
   const handleIndent = () => {
     const gantt = ganttRef.current;
-    if (!gantt || !selectedTaskId) return;
-    if (indentTask(gantt, selectedTaskId)) {
-      refreshWbsState(selectedTaskId);
+    if (!gantt) return;
+    const taskId = resolveSelectedTaskId(gantt) ?? selectedTaskId;
+    if (!taskId) return;
+    if (indentTask(gantt, taskId)) {
+      refreshWbsState(taskId);
+      scheduleReorder();
     }
   };
 
   const handleOutdent = () => {
     const gantt = ganttRef.current;
-    if (!gantt || !selectedTaskId) return;
-    if (outdentTask(gantt, selectedTaskId)) {
-      refreshWbsState(selectedTaskId);
+    if (!gantt) return;
+    const taskId = resolveSelectedTaskId(gantt) ?? selectedTaskId;
+    if (!taskId) return;
+    if (outdentTask(gantt, taskId)) {
+      refreshWbsState(taskId);
+      scheduleReorder();
     }
   };
 
   return (
     <div
-      className="relative overflow-hidden rounded-lg border border-border"
+      className="flex flex-col overflow-hidden rounded-lg border border-border"
       style={{ height: compact ? 360 : 640 }}
     >
-      <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-card/95 px-1 py-0.5 text-xs shadow-sm backdrop-blur-sm">
-        <button
-          type="button"
-          className="rounded px-2 py-1 hover:bg-accent disabled:opacity-40"
-          disabled={!canZoomIn}
-          title="放大时间轴"
-          aria-label="放大时间轴"
-          onClick={handleZoomIn}
-        >
-          +
-        </button>
-        <span className="min-w-[2rem] text-center text-muted-foreground">
-          {ganttZoomLevelLabel(zoomLevelName)}
-        </span>
-        <button
-          type="button"
-          className="rounded px-2 py-1 hover:bg-accent disabled:opacity-40"
-          disabled={!canZoomOut}
-          title="缩小时间轴"
-          aria-label="缩小时间轴"
-          onClick={handleZoomOut}
-        >
-          −
-        </button>
-        {!compact && (
-          <span className="hidden border-l border-border pl-2 text-muted-foreground sm:inline">
-            滚轮缩放
-          </span>
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-2 py-1.5 text-xs">
+        {isInteractive && !compact ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground">
+              单击选中 · 双击单元格编辑 · Shift+←/→ 升降级
+            </span>
+            <span className="hidden h-4 w-px bg-border sm:inline" />
+            <button
+              type="button"
+              className="rounded px-2 py-0.5 text-primary hover:bg-accent disabled:opacity-40"
+              disabled={!wbsState.canOutdent}
+              title="升级（Shift+←）"
+              onClick={handleOutdent}
+            >
+              升级
+            </button>
+            <button
+              type="button"
+              className="rounded px-2 py-0.5 text-primary hover:bg-accent disabled:opacity-40"
+              disabled={!wbsState.canIndent}
+              title="降级（Shift+→）"
+              onClick={handleIndent}
+            >
+              降级
+            </button>
+          </div>
+        ) : (
+          <span />
         )}
+
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="rounded px-2 py-1 hover:bg-accent disabled:opacity-40"
+            disabled={!canZoomIn}
+            title="放大时间轴"
+            aria-label="放大时间轴"
+            onClick={handleZoomIn}
+          >
+            +
+          </button>
+          <span className="min-w-[2rem] text-center text-muted-foreground">
+            {ganttZoomLevelLabel(zoomLevelName)}
+          </span>
+          <button
+            type="button"
+            className="rounded px-2 py-1 hover:bg-accent disabled:opacity-40"
+            disabled={!canZoomOut}
+            title="缩小时间轴"
+            aria-label="缩小时间轴"
+            onClick={handleZoomOut}
+          >
+            −
+          </button>
+          {!compact && (
+            <span className="hidden border-l border-border pl-2 text-muted-foreground sm:inline">
+              滚轮缩放
+            </span>
+          )}
+        </div>
       </div>
 
-      {isInteractive && !compact && (
-        <div className="absolute left-3 top-2 z-10 flex flex-wrap items-center gap-2 rounded-md border border-border bg-card/95 px-2 py-1 text-xs shadow-sm backdrop-blur-sm">
-          <span className="text-muted-foreground">
-            点击 + 添加 · 双击编辑 · Shift+←/→ 升降级
-          </span>
-          <span className="hidden h-4 w-px bg-border sm:inline" />
-          <button
-            type="button"
-            className="rounded px-2 py-0.5 text-primary hover:bg-accent disabled:opacity-40"
-            disabled={!wbsState.canOutdent || !selectedTaskId}
-            title="升级（Shift+Left）"
-            onClick={handleOutdent}
-          >
-            升级
-          </button>
-          <button
-            type="button"
-            className="rounded px-2 py-0.5 text-primary hover:bg-accent disabled:opacity-40"
-            disabled={!wbsState.canIndent || !selectedTaskId}
-            title="降级（Shift+Right）"
-            onClick={handleIndent}
-          >
-            降级
-          </button>
-        </div>
-      )}
-
-      <div ref={containerRef} className="h-full w-full" />
+      <div
+        ref={chartShellRef}
+        tabIndex={isInteractive && !compact ? 0 : -1}
+        onKeyDown={handleChartKeyDown}
+        className="relative min-h-0 flex-1 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
+      >
+        <div ref={containerRef} className="h-full w-full" />
+      </div>
     </div>
   );
 });
