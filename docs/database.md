@@ -107,6 +107,9 @@ npm run db:seed        # 同步种子数据并再次扫描
 | 库存 ≥ 0 | 出库事务内 `SELECT FOR UPDATE` 校验余额，不足则回滚 |
 | 材料单分类 | `materials.category_id` 非空，唯一外键 |
 | 材料编号唯一 | `materials.code` UNIQUE |
+| 材料项目内编号唯一 | `(materials.project_id, materials.code)` UNIQUE |
+| 材料归属项目 | `materials.project_id` 非空，专款专料专用 |
+| 材料分类专业 | `material_categories.discipline` ∈ civil/mep/finishing/general |
 | 出库关联项目 | `stock_outbound.project_id` 非空 |
 | 采购关联供应商 | `purchase_orders.supplier_id` 非空 |
 | 材料价格历史 | `material_price_history` 追加写入，禁止 UPDATE 旧记录 |
@@ -136,6 +139,7 @@ npm run db:seed        # 同步种子数据并再次扫描
 | 2026-07-05 | project_task_gantt_flag | show_in_gantt |
 | 2026-07-06 | workflow_approval | approval_instances, approval_records, approval_templates, notifications |
 | 2026-07-06 | material | materials, material_categories, material_price_history, material_qrcodes, stock_transactions |
+| 2026-07-06 | material_project_discipline | project_id, storage_location, category discipline |
 
 ---
 

@@ -4,6 +4,9 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 const materialInclude = {
   category: {
+    select: { id: true, code: true, name: true, discipline: true },
+  },
+  project: {
     select: { id: true, code: true, name: true },
   },
   priceHistory: {
@@ -78,6 +81,32 @@ export class MaterialRepository {
         },
         qrcode: true,
       },
+    });
+  }
+
+  findByCodeInProject(projectId: string, code: string) {
+    return this.prisma.material.findFirst({
+      where: { projectId, code, deletedAt: null },
+    });
+  }
+
+  findProjectById(id: string) {
+    return this.prisma.project.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, code: true, name: true, managerId: true },
+    });
+  }
+
+  findProjectByCode(code: string) {
+    return this.prisma.project.findFirst({
+      where: { code, deletedAt: null },
+      select: { id: true, code: true, name: true, managerId: true },
+    });
+  }
+
+  isProjectMember(projectId: string, userId: string) {
+    return this.prisma.projectMember.findFirst({
+      where: { projectId, userId },
     });
   }
 

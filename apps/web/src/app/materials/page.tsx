@@ -14,9 +14,12 @@ import {
   listMaterialAlerts,
   listMaterialCategories,
   listMaterials,
+  listProjects,
+  MATERIAL_DISCIPLINE_LABEL,
   MaterialAlertItem,
   MaterialCategoryItem,
   MaterialItem,
+  ProjectItem,
 } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
@@ -29,11 +32,14 @@ export default function MaterialsPage() {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
   const [alerts, setAlerts] = useState<MaterialAlertItem[]>([]);
   const [categories, setCategories] = useState<MaterialCategoryItem[]>([]);
+  const [projects, setProjects] = useState<ProjectItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [projectId, setProjectId] = useState('');
+  const [discipline, setDiscipline] = useState('');
   const [importText, setImportText] = useState('');
   const [qrInfo, setQrInfo] = useState<string>('');
   const [form, setForm] = useState({
@@ -42,6 +48,8 @@ export default function MaterialsPage() {
     spec: '',
     unit: '',
     categoryId: '',
+    projectId: '',
+    storageLocation: '',
     minStock: '',
     priceAmount: '',
     priceCurrency: 'CNY',
@@ -49,6 +57,7 @@ export default function MaterialsPage() {
   const [categoryForm, setCategoryForm] = useState({
     code: '',
     name: '',
+    discipline: 'general',
     description: '',
   });
 
@@ -75,6 +84,8 @@ export default function MaterialsPage() {
         const res = await listMaterials({
           q: q || undefined,
           categoryId: categoryId || undefined,
+          projectId: projectId || undefined,
+          discipline: discipline || undefined,
         });
         setMaterials(res.data.list);
         setTotal(res.data.total);
@@ -94,9 +105,10 @@ export default function MaterialsPage() {
       return;
     }
     void loadList();
-    if (canCreate || canManageCategory) {
-      void loadCategories();
-    }
+    void loadCategories();
+    listProjects({ page: 1, pageSize: 100 })
+      .then((res) => setProjects(res.data.list))
+      .catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRead, tab]);
 
@@ -109,6 +121,8 @@ export default function MaterialsPage() {
         spec: form.spec || undefined,
         unit: form.unit,
         categoryId: form.categoryId,
+        projectId: form.projectId,
+        storageLocation: form.storageLocation || undefined,
         minStock: form.minStock ? Number(form.minStock) : undefined,
         purchasePrice: form.priceAmount
           ? {
@@ -123,6 +137,8 @@ export default function MaterialsPage() {
         spec: '',
         unit: '',
         categoryId: '',
+        projectId: '',
+        storageLocation: '',
         minStock: '',
         priceAmount: '',
         priceCurrency: 'CNY',
@@ -138,7 +154,7 @@ export default function MaterialsPage() {
     e.preventDefault();
     try {
       await createMaterialCategory(categoryForm);
-      setCategoryForm({ code: '', name: '', description: '' });
+      setCategoryForm({ code: '', name: '', discipline: 'general', description: '' });
       await loadCategories();
     } catch (err) {
       setError(err instanceof Error ? err.message : '创建分类失败');
@@ -233,11 +249,35 @@ export default function MaterialsPage() {
           <Card className="p-4">
             <div className="mb-4 flex flex-wrap gap-2">
               <Input
-                placeholder="搜索编号/名称/规格/品牌"
+                placeholder="搜索编号/名称/规格/储存位置"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 className="max-w-xs"
               />
+              <select
+                className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
+                value={discipline}
+                onChange={(e) => setDiscipline(e.target.value)}
+              >
+                <option value="">全部专业</option>
+                {Object.entries(MATERIAL_DISCIPLINE_LABEL).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <select
+                className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+              >
+                <option value="">全部项目</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
               <select
                 className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
                 value={categoryId}
@@ -284,6 +324,28 @@ export default function MaterialsPage() {
                 />
                 <select
                   className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
+                  value={form.projectId}
+                  onChange={(e) =>
+                    setForm({ ...form, projectId: e.target.value })
+                  }
+                  required
+                >
+                  <option value="">归属项目</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} — {p.name}
+                    </option>
+                  ))}
+                </select>
+                <Input
+                  placeholder="储存位置（如 杜阿拉仓-A区-3号架）"
+                  value={form.storageLocation}
+                  onChange={(e) =>
+                    setForm({ ...form, storageLocation: e.target.value })
+                  }
+                />
+                <select
+                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
                   value={form.categoryId}
                   onChange={(e) =>
                     setForm({ ...form, categoryId: e.target.value })
@@ -293,7 +355,9 @@ export default function MaterialsPage() {
                   <option value="">选择分类</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.name}（
+                      {MATERIAL_DISCIPLINE_LABEL[c.discipline] ?? c.discipline}
+                      ）
                     </option>
                   ))}
                 </select>
@@ -322,7 +386,7 @@ export default function MaterialsPage() {
                 <h2 className="text-sm font-medium">CSV 导入</h2>
                 <textarea
                   className="min-h-24 w-full rounded-lg border border-border bg-background p-3 text-sm"
-                  placeholder="code,name,unit,categoryCode,minStock,priceAmount,priceCurrency..."
+                  placeholder="code,name,unit,categoryCode,projectCode,storageLocation..."
                   value={importText}
                   onChange={(e) => setImportText(e.target.value)}
                 />
@@ -341,6 +405,9 @@ export default function MaterialsPage() {
                     <tr className="border-b border-border text-left text-muted-foreground">
                       <th className="py-2 pr-3">编号</th>
                       <th className="py-2 pr-3">名称</th>
+                      <th className="py-2 pr-3">项目</th>
+                      <th className="py-2 pr-3">专业</th>
+                      <th className="py-2 pr-3">储存位置</th>
                       <th className="py-2 pr-3">分类</th>
                       <th className="py-2 pr-3">库存</th>
                       <th className="py-2 pr-3">最低价</th>
@@ -352,6 +419,16 @@ export default function MaterialsPage() {
                       <tr key={item.id} className="border-b border-border/60">
                         <td className="py-2 pr-3 font-medium">{item.code}</td>
                         <td className="py-2 pr-3">{item.name}</td>
+                        <td className="py-2 pr-3">{item.project?.name ?? '—'}</td>
+                        <td className="py-2 pr-3">
+                          {item.category?.discipline
+                            ? MATERIAL_DISCIPLINE_LABEL[item.category.discipline] ??
+                              item.category.discipline
+                            : '—'}
+                        </td>
+                        <td className="py-2 pr-3">
+                          {item.storageLocation ?? '—'}
+                        </td>
                         <td className="py-2 pr-3">{item.category?.name ?? '—'}</td>
                         <td className="py-2 pr-3">
                           {item.stock} {item.unit}
@@ -422,7 +499,7 @@ export default function MaterialsPage() {
           <Card className="p-4">
             {canManageCategory ? (
               <form
-                className="mb-4 grid gap-2 md:grid-cols-3"
+                className="mb-4 grid gap-2 md:grid-cols-4"
                 onSubmit={handleCreateCategory}
               >
                 <Input
@@ -441,6 +518,23 @@ export default function MaterialsPage() {
                   }
                   required
                 />
+                <select
+                  className="h-9 rounded-lg border border-border bg-background px-3 text-sm"
+                  value={categoryForm.discipline}
+                  onChange={(e) =>
+                    setCategoryForm({
+                      ...categoryForm,
+                      discipline: e.target.value,
+                    })
+                  }
+                  required
+                >
+                  {Object.entries(MATERIAL_DISCIPLINE_LABEL).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}团队
+                    </option>
+                  ))}
+                </select>
                 <Button type="submit">新增分类</Button>
               </form>
             ) : null}
@@ -451,6 +545,9 @@ export default function MaterialsPage() {
                   className="rounded-lg border border-border px-3 py-2"
                 >
                   <span className="font-medium">{c.code}</span> — {c.name}
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {MATERIAL_DISCIPLINE_LABEL[c.discipline] ?? c.discipline}
+                  </span>
                 </li>
               ))}
             </ul>

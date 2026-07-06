@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { MaterialDiscipline } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -64,6 +66,21 @@ export class CreateMaterialDto {
   @ApiProperty()
   @IsUUID()
   categoryId!: string;
+
+  @ApiProperty({ description: '归属项目（专款专料专用）' })
+  @IsUUID()
+  projectId!: string;
+
+  @ApiPropertyOptional({ description: '储存位置，如 杜阿拉仓-A区-3号架' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  storageLocation?: string;
+
+  @ApiPropertyOptional({ description: '关联仓库 ID（仓库模块接入后使用）' })
+  @IsOptional()
+  @IsUUID()
+  warehouseId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -135,6 +152,22 @@ export class UpdateMaterialDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsUUID()
+  projectId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  storageLocation?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  warehouseId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsNumber()
   @Min(0)
   minStock?: number | null;
@@ -176,6 +209,10 @@ export class CreateMaterialCategoryDto {
   @MaxLength(120)
   name!: string;
 
+  @ApiProperty({ enum: MaterialDiscipline, description: '专业/团队' })
+  @IsEnum(MaterialDiscipline)
+  discipline!: MaterialDiscipline;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -197,6 +234,11 @@ export class UpdateMaterialCategoryDto {
   @IsNotEmpty()
   @MaxLength(120)
   name?: string;
+
+  @ApiPropertyOptional({ enum: MaterialDiscipline })
+  @IsOptional()
+  @IsEnum(MaterialDiscipline)
+  discipline?: MaterialDiscipline;
 
   @ApiPropertyOptional()
   @IsOptional()

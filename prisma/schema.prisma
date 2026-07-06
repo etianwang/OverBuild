@@ -82,6 +82,13 @@ enum StockTransactionType {
   adjustment
 }
 
+enum MaterialDiscipline {
+  civil
+  mep
+  finishing
+  general
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -221,6 +228,7 @@ model Project {
   tasks      ProjectTask[]
   approvals  ApprovalInstance[]
   stockTransactions StockTransaction[]
+  materials  Material[]
 
   @@index([status])
   @@index([managerId])
@@ -387,28 +395,33 @@ model Notification {
 }
 
 model MaterialCategory {
-  id          String    @id @default(uuid())
-  code        String    @unique
+  id          String             @id @default(uuid())
+  code        String             @unique
   name        String
+  discipline  MaterialDiscipline @default(general)
   description String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  deletedAt   DateTime?          @map("deleted_at")
 
   materials Material[]
 
+  @@index([discipline])
   @@map("material_categories")
 }
 
 model Material {
   id                     String    @id @default(uuid())
-  code                   String    @unique
+  code                   String
   name                   String
   spec                   String?
   brand                  String?
   model                  String?
   unit                   String
   categoryId             String    @map("category_id")
+  projectId              String    @map("project_id")
+  storageLocation        String?   @map("storage_location")
+  warehouseId            String?   @map("warehouse_id")
   stock                  Decimal   @default(0) @db.Decimal(18, 4)
   minStock               Decimal?  @map("min_stock") @db.Decimal(18, 4)
   purchasePriceAmount    Decimal?  @map("purchase_price_amount") @db.Decimal(18, 4)
@@ -420,11 +433,14 @@ model Material {
   deletedAt              DateTime? @map("deleted_at")
 
   category        MaterialCategory      @relation(fields: [categoryId], references: [id])
+  project         Project               @relation(fields: [projectId], references: [id])
   priceHistory    MaterialPriceHistory[]
   qrcode          MaterialQrcode?
   stockTransactions StockTransaction[]
 
+  @@unique([projectId, code])
   @@index([categoryId])
+  @@index([projectId])
   @@index([name])
   @@map("materials")
 }

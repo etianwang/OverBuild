@@ -1,4 +1,4 @@
-import { PrismaClient, Locale, UserStatus, ProjectStatus } from '@prisma/client';
+import { PrismaClient, Locale, UserStatus, ProjectStatus, MaterialDiscipline } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { fixTextContent } from './lib/fix-text-content';
 
@@ -341,22 +341,39 @@ async function main() {
 
   const pipeCategory = await prisma.materialCategory.upsert({
     where: { code: 'PIPE' },
-    update: { name: '管材' },
+    update: { name: '机电管材', discipline: MaterialDiscipline.mep },
     create: {
       code: 'PIPE',
-      name: '管材',
-      description: '镀锌管、无缝钢管等',
+      name: '机电管材',
+      discipline: MaterialDiscipline.mep,
+      description: '镀锌管、电缆、暖通管材等（机电团队）',
     },
   });
 
   const steelCategory = await prisma.materialCategory.upsert({
     where: { code: 'STEEL' },
-    update: { name: '钢材' },
+    update: { name: '土建钢材', discipline: MaterialDiscipline.civil },
     create: {
       code: 'STEEL',
-      name: '钢材',
-      description: '型钢、钢板等',
+      name: '土建钢材',
+      discipline: MaterialDiscipline.civil,
+      description: '型钢、钢板、混凝土辅材等（土建团队）',
     },
+  });
+
+  const finishingCategory = await prisma.materialCategory.upsert({
+    where: { code: 'FINISH' },
+    update: { name: '精装饰面', discipline: MaterialDiscipline.finishing },
+    create: {
+      code: 'FINISH',
+      name: '精装饰面',
+      discipline: MaterialDiscipline.finishing,
+      description: '涂料、瓷砖、洁具、门窗五金等（精装团队）',
+    },
+  });
+
+  const demoProject = await prisma.project.findUniqueOrThrow({
+    where: { code: 'PRJ-DEMO-001' },
   });
 
   const demoMaterials = [
@@ -367,6 +384,7 @@ async function main() {
       brand: '某某钢铁',
       unit: '米',
       categoryId: pipeCategory.id,
+      storageLocation: '杜阿拉仓-B区-2号架',
       minStock: 100,
       amount: 45.5,
       stock: 80,
@@ -377,19 +395,37 @@ async function main() {
       spec: '200×200',
       unit: '吨',
       categoryId: steelCategory.id,
+      storageLocation: '杜阿拉仓-A区-1号架',
       minStock: 5,
       amount: 5200,
       stock: 12,
+    },
+    {
+      code: 'MAT-DEMO-003',
+      name: '抛光瓷砖',
+      spec: '600×600',
+      unit: '箱',
+      categoryId: finishingCategory.id,
+      storageLocation: '杜阿拉仓-C区-5号架',
+      minStock: 20,
+      amount: 180,
+      stock: 15,
     },
   ];
 
   for (const item of demoMaterials) {
     const material = await prisma.material.upsert({
-      where: { code: item.code },
+      where: {
+        projectId_code: {
+          projectId: demoProject.id,
+          code: item.code,
+        },
+      },
       update: {
         name: item.name,
         spec: item.spec,
         unit: item.unit,
+        storageLocation: item.storageLocation,
         minStock: item.minStock,
         stock: item.stock,
         purchasePriceAmount: item.amount,
@@ -402,6 +438,8 @@ async function main() {
         brand: item.brand,
         unit: item.unit,
         categoryId: item.categoryId,
+        projectId: demoProject.id,
+        storageLocation: item.storageLocation,
         minStock: item.minStock,
         stock: item.stock,
         purchasePriceAmount: item.amount,

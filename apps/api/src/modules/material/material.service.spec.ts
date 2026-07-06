@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ConflictException, ForbiddenException } from '@nestjs/common';
+import { MaterialDiscipline } from '@prisma/client';
 import { MaterialService } from './material.service';
 
 describe('MaterialService', () => {
@@ -7,6 +8,10 @@ describe('MaterialService', () => {
     findMany: vi.fn(),
     findById: vi.fn(),
     findByCode: vi.fn(),
+    findByCodeInProject: vi.fn(),
+    findProjectById: vi.fn(),
+    findProjectByCode: vi.fn(),
+    isProjectMember: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     softDelete: vi.fn(),
@@ -34,7 +39,7 @@ describe('MaterialService', () => {
     username: 'reader',
     name: 'Reader',
     locale: 'zh',
-    roles: ['project_manager'],
+    roles: ['admin'],
     permissions: ['material.read'],
   };
 
@@ -74,7 +79,8 @@ describe('MaterialService', () => {
 
   it('rejects duplicate material code on create', async () => {
     materialRepository.findCategoryById.mockResolvedValue({ id: 'c1' });
-    materialRepository.findByCode.mockResolvedValue({ id: 'm1' });
+    materialRepository.findProjectById.mockResolvedValue({ id: 'p1' });
+    materialRepository.findByCodeInProject.mockResolvedValue({ id: 'm1' });
 
     await expect(
       service.create(writer, {
@@ -82,11 +88,12 @@ describe('MaterialService', () => {
         name: '钢管',
         unit: '米',
         categoryId: 'c1',
+        projectId: 'p1',
       }),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('lists materials for reader', async () => {
+  it('lists materials for admin reader', async () => {
     materialRepository.findMany.mockResolvedValue([
       [
         {
@@ -98,6 +105,9 @@ describe('MaterialService', () => {
           model: null,
           unit: '米',
           categoryId: 'c1',
+          projectId: 'p1',
+          storageLocation: 'A区-1架',
+          warehouseId: null,
           stock: 0,
           minStock: null,
           purchasePriceAmount: null,
@@ -106,7 +116,13 @@ describe('MaterialService', () => {
           supplierId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
-          category: { id: 'c1', code: 'PIPE', name: '管材' },
+          category: {
+            id: 'c1',
+            code: 'PIPE',
+            name: '机电管材',
+            discipline: MaterialDiscipline.mep,
+          },
+          project: { id: 'p1', code: 'PRJ-1', name: '示例项目' },
           priceHistory: [],
         },
       ],
@@ -116,5 +132,6 @@ describe('MaterialService', () => {
     const result = await service.list(reader, 1, 20);
     expect(result.total).toBe(1);
     expect(result.list[0].code).toBe('MAT-001');
+    expect(result.list[0].project?.code).toBe('PRJ-1');
   });
 });

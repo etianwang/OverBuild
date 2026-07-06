@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, MaterialDiscipline } from '@prisma/client';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuthUser } from '../auth/auth.types';
 import { parseCsv, toCsv } from '../project/csv.util';
@@ -92,6 +92,9 @@ export class MaterialService {
     model: string | null;
     unit: string;
     categoryId: string;
+    projectId: string;
+    storageLocation: string | null;
+    warehouseId: string | null;
     stock: Prisma.Decimal;
     minStock: Prisma.Decimal | null;
     purchasePriceAmount: Prisma.Decimal | null;
@@ -100,7 +103,13 @@ export class MaterialService {
     supplierId: string | null;
     createdAt: Date;
     updatedAt: Date;
-    category?: { id: string; code: string; name: string };
+    category?: {
+      id: string;
+      code: string;
+      name: string;
+      discipline: MaterialDiscipline;
+    };
+    project?: { id: string; code: string; name: string };
     priceHistory?: Array<{
       id: string;
       amount: Prisma.Decimal;
@@ -120,6 +129,9 @@ export class MaterialService {
       model: material.model,
       unit: material.unit,
       categoryId: material.categoryId,
+      projectId: material.projectId,
+      storageLocation: material.storageLocation,
+      warehouseId: material.warehouseId,
       stock: Number(material.stock),
       minStock: material.minStock != null ? Number(material.minStock) : null,
       purchasePrice: this.toMoney(
@@ -132,15 +144,61 @@ export class MaterialService {
       imageUrl: material.imageUrl,
       supplierId: material.supplierId,
       category: material.category,
+      project: material.project,
       createdAt: material.createdAt,
       updatedAt: material.updatedAt,
       qrcode: material.qrcode ?? null,
     };
   }
 
-  private buildWhere(q?: string, categoryId?: string): Prisma.MaterialWhereInput {
+  private async applyProjectScope(
+    user: AuthUser,
+    where: Prisma.MaterialWhereInput,
+    projectId?: string,
+  ) {
+    if (this.isAdmin(user) || user.roles.includes('boss')) {
+      if (projectId) where.projectId = projectId;
+      return;
+    }
+
+    const scopeOr: Prisma.MaterialWhereInput[] = [
+      { project: { managerId: user.id } },
+      { project: { members: { some: { userId: user.id } } } },
+    ];
+
+    if (projectId) {
+      const project = await this.materialRepository.findProjectById(projectId);
+      if (!project) {
+        throw new NotFoundException('项目不存在');
+      }
+      const isManager = project.managerId === user.id;
+      const member = await this.materialRepository.isProjectMember(
+        projectId,
+        user.id,
+      );
+      if (!isManager && !member) {
+        throw new ForbiddenException('无权限查看该项目材料');
+      }
+      where.projectId = projectId;
+      return;
+    }
+
+    where.AND = [
+      ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+      { OR: scopeOr },
+    ];
+  }
+
+  private buildWhere(
+    q?: string,
+    categoryId?: string,
+    discipline?: MaterialDiscipline,
+  ): Prisma.MaterialWhereInput {
     const where: Prisma.MaterialWhereInput = { deletedAt: null };
     if (categoryId) where.categoryId = categoryId;
+    if (discipline) {
+      where.category = { discipline };
+    }
     if (q) {
       where.OR = [
         { code: { contains: q, mode: 'insensitive' } },
@@ -148,6 +206,9 @@ export class MaterialService {
         { spec: { contains: q, mode: 'insensitive' } },
         { brand: { contains: q, mode: 'insensitive' } },
         { model: { contains: q, mode: 'insensitive' } },
+        { storageLocation: { contains: q, mode: 'insensitive' } },
+        { project: { name: { contains: q, mode: 'insensitive' } } },
+        { project: { code: { contains: q, mode: 'insensitive' } } },
       ];
     }
     return where;
@@ -161,14 +222,18 @@ export class MaterialService {
     sort = 'code',
     order: 'asc' | 'desc' = 'asc',
     categoryId?: string,
+    projectId?: string,
+    discipline?: MaterialDiscipline,
   ) {
     this.assertRead(user);
     const sortField = SORTABLE_FIELDS.has(sort) ? sort : 'code';
     const skip = (page - 1) * pageSize;
+    const where = this.buildWhere(q, categoryId, discipline);
+    await this.applyProjectScope(user, where, projectId);
     const [list, total] = await this.materialRepository.findMany({
       skip,
       take: pageSize,
-      where: this.buildWhere(q, categoryId),
+      where,
       orderBy: { [sortField]: order },
     });
     return {
@@ -185,7 +250,26 @@ export class MaterialService {
     if (!material) {
       throw new NotFoundException('材料不存在');
     }
+    const where: Prisma.MaterialWhereInput = { id };
+    await this.applyProjectScope(user, where);
+    const [allowed] = await this.materialRepository.findMany({
+      skip: 0,
+      take: 1,
+      where,
+      orderBy: { code: 'asc' },
+    });
+    if (!allowed) {
+      throw new ForbiddenException('无权限查看此材料');
+    }
     return this.mapMaterial(material);
+  }
+
+  private async validateProject(projectId: string) {
+    const project = await this.materialRepository.findProjectById(projectId);
+    if (!project) {
+      throw new BadRequestException('归属项目不存在');
+    }
+    return project;
   }
 
   private async validateCategory(categoryId: string) {
@@ -213,10 +297,14 @@ export class MaterialService {
   async create(user: AuthUser, dto: CreateMaterialDto) {
     this.assertWrite(user);
     await this.validateCategory(dto.categoryId);
+    await this.validateProject(dto.projectId);
 
-    const existing = await this.materialRepository.findByCode(dto.code);
+    const existing = await this.materialRepository.findByCodeInProject(
+      dto.projectId,
+      dto.code,
+    );
     if (existing) {
-      throw new ConflictException('材料编号已存在');
+      throw new ConflictException('该项目下材料编号已存在');
     }
 
     const material = await this.materialRepository.create({
@@ -227,6 +315,9 @@ export class MaterialService {
       model: dto.model,
       unit: dto.unit,
       category: { connect: { id: dto.categoryId } },
+      project: { connect: { id: dto.projectId } },
+      storageLocation: dto.storageLocation,
+      warehouseId: dto.warehouseId,
       minStock: dto.minStock,
       purchasePriceAmount: dto.purchasePrice?.amount,
       purchasePriceCurrency: dto.purchasePrice?.currency.toUpperCase(),
@@ -274,10 +365,18 @@ export class MaterialService {
     }
 
     if (dto.code && dto.code !== material.code) {
-      const dup = await this.materialRepository.findByCode(dto.code);
+      const projectId = dto.projectId ?? material.projectId;
+      const dup = await this.materialRepository.findByCodeInProject(
+        projectId,
+        dto.code,
+      );
       if (dup && dup.id !== id) {
-        throw new ConflictException('材料编号已存在');
+        throw new ConflictException('该项目下材料编号已存在');
       }
+    }
+
+    if (dto.projectId) {
+      await this.validateProject(dto.projectId);
     }
 
     if (dto.categoryId) {
@@ -300,6 +399,13 @@ export class MaterialService {
       ...(dto.categoryId !== undefined
         ? { category: { connect: { id: dto.categoryId } } }
         : {}),
+      ...(dto.projectId !== undefined
+        ? { project: { connect: { id: dto.projectId } } }
+        : {}),
+      ...(dto.storageLocation !== undefined
+        ? { storageLocation: dto.storageLocation }
+        : {}),
+      ...(dto.warehouseId !== undefined ? { warehouseId: dto.warehouseId } : {}),
       ...(dto.minStock !== undefined ? { minStock: dto.minStock } : {}),
       ...(dto.purchasePrice !== undefined
         ? {
@@ -393,9 +499,10 @@ export class MaterialService {
       const name = row.name || row['名称'];
       const unit = row.unit || row['单位'];
       const categoryCode = row.categoryCode || row['分类编号'];
+      const projectCode = row.projectCode || row['项目编号'];
 
-      if (!code || !name || !unit || !categoryCode) {
-        errors.push(`第 ${line} 行：缺少编号/名称/单位/分类编号`);
+      if (!code || !name || !unit || !categoryCode || !projectCode) {
+        errors.push(`第 ${line} 行：缺少编号/名称/单位/分类编号/项目编号`);
         continue;
       }
 
@@ -405,15 +512,27 @@ export class MaterialService {
         continue;
       }
 
-      const existing = await this.materialRepository.findByCode(code);
+      const resolvedProject =
+        await this.materialRepository.findProjectByCode(projectCode);
+      if (!resolvedProject) {
+        errors.push(`第 ${line} 行：项目 ${projectCode} 不存在`);
+        continue;
+      }
+
+      const existing = await this.materialRepository.findByCodeInProject(
+        resolvedProject.id,
+        code,
+      );
       if (existing) {
-        errors.push(`第 ${line} 行：编号 ${code} 已存在`);
+        errors.push(`第 ${line} 行：项目 ${projectCode} 下编号 ${code} 已存在`);
         continue;
       }
 
       const minStock = row.minStock || row['最低库存'];
       const amount = row.priceAmount || row['采购价'];
       const currency = row.priceCurrency || row['币种'] || 'CNY';
+      const storageLocation =
+        row.storageLocation || row['储存位置'] || undefined;
 
       await this.materialRepository.create({
         code,
@@ -423,6 +542,8 @@ export class MaterialService {
         model: row.model || row['型号'],
         unit,
         category: { connect: { id: categoryId } },
+        project: { connect: { id: resolvedProject.id } },
+        storageLocation,
         minStock: minStock ? Number(minStock) : undefined,
         purchasePriceAmount: amount ? Number(amount) : undefined,
         purchasePriceCurrency: amount ? currency.toUpperCase() : undefined,
@@ -448,6 +569,8 @@ export class MaterialService {
     categoryId?: string,
     sort = 'code',
     order: 'asc' | 'desc' = 'asc',
+    projectId?: string,
+    discipline?: MaterialDiscipline,
   ) {
     if (
       !this.isAdmin(user) &&
@@ -457,16 +580,21 @@ export class MaterialService {
     }
 
     const sortField = SORTABLE_FIELDS.has(sort) ? sort : 'code';
+    const where = this.buildWhere(q, categoryId, discipline);
+    await this.applyProjectScope(user, where, projectId);
     const [list] = await this.materialRepository.findMany({
       skip: 0,
       take: 5000,
-      where: this.buildWhere(q, categoryId),
+      where,
       orderBy: { [sortField]: order },
     });
 
     const headers = [
       'code',
       'name',
+      'projectCode',
+      'storageLocation',
+      'discipline',
       'spec',
       'brand',
       'model',
@@ -482,6 +610,9 @@ export class MaterialService {
       return [
         item.code,
         item.name,
+        item.project?.code ?? '',
+        item.storageLocation ?? '',
+        item.category?.discipline ?? '',
         item.spec ?? '',
         item.brand ?? '',
         item.model ?? '',

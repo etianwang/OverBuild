@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { MaterialDiscipline } from '@prisma/client';
 import { Request, Response } from 'express';
 import { Permissions } from '../../common/decorators/auth.decorators';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -41,6 +42,8 @@ export class MaterialController {
     @Res() res: Response,
     @Query('q') q?: string,
     @Query('categoryId') categoryId?: string,
+    @Query('projectId') projectId?: string,
+    @Query('discipline') discipline?: MaterialDiscipline,
     @Query('sort') sort = 'code',
     @Query('order') order: 'asc' | 'desc' = 'asc',
   ) {
@@ -50,6 +53,8 @@ export class MaterialController {
       categoryId,
       sort,
       order,
+      projectId,
+      discipline,
     );
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -126,6 +131,8 @@ export class MaterialController {
     @Query('sort') sort = 'code',
     @Query('order') order: 'asc' | 'desc' = 'asc',
     @Query('categoryId') categoryId?: string,
+    @Query('projectId') projectId?: string,
+    @Query('discipline') discipline?: MaterialDiscipline,
   ) {
     return this.materialService.list(
       req.user,
@@ -135,6 +142,8 @@ export class MaterialController {
       sort,
       order,
       categoryId,
+      projectId,
+      discipline,
     );
   }
 

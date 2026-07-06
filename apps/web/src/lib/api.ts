@@ -726,6 +726,7 @@ export interface MaterialCategoryItem {
   id: string;
   code: string;
   name: string;
+  discipline: string;
   description?: string | null;
 }
 
@@ -738,13 +739,17 @@ export interface MaterialItem {
   model?: string | null;
   unit: string;
   categoryId: string;
+  projectId: string;
+  storageLocation?: string | null;
+  warehouseId?: string | null;
   stock: number;
   minStock?: number | null;
   purchasePrice?: MoneyValue | null;
   latestPrice?: MoneyValue | null;
   imageUrl?: string | null;
   supplierId?: string | null;
-  category?: { id: string; code: string; name: string };
+  category?: { id: string; code: string; name: string; discipline?: string };
+  project?: { id: string; code: string; name: string };
   createdAt: string;
   updatedAt: string;
 }
@@ -760,6 +765,13 @@ export interface MaterialAlertItem {
   category?: MaterialCategoryItem | null;
 }
 
+export const MATERIAL_DISCIPLINE_LABEL: Record<string, string> = {
+  civil: '土建',
+  mep: '机电',
+  finishing: '精装',
+  general: '通用',
+};
+
 export async function listMaterials(params?: {
   page?: number;
   pageSize?: number;
@@ -767,6 +779,8 @@ export async function listMaterials(params?: {
   sort?: string;
   order?: 'asc' | 'desc';
   categoryId?: string;
+  projectId?: string;
+  discipline?: string;
 }) {
   const search = new URLSearchParams({
     page: String(params?.page ?? 1),
@@ -776,6 +790,8 @@ export async function listMaterials(params?: {
   if (params?.sort) search.set('sort', params.sort);
   if (params?.order) search.set('order', params.order);
   if (params?.categoryId) search.set('categoryId', params.categoryId);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.discipline) search.set('discipline', params.discipline);
   return apiFetch<Paginated<MaterialItem>>(`/materials?${search}`);
 }
 
@@ -797,6 +813,7 @@ export async function listMaterialCategories() {
 export async function createMaterialCategory(data: {
   code: string;
   name: string;
+  discipline: string;
   description?: string;
 }) {
   return apiFetch<MaterialCategoryItem>('/materials/categories', {
@@ -813,6 +830,9 @@ export async function createMaterial(data: {
   model?: string;
   unit: string;
   categoryId: string;
+  projectId: string;
+  storageLocation?: string;
+  warehouseId?: string;
   minStock?: number;
   purchasePrice?: MoneyValue;
   imageUrl?: string;
@@ -863,6 +883,8 @@ export async function importMaterials(content: string) {
 export async function exportMaterials(params?: {
   q?: string;
   categoryId?: string;
+  projectId?: string;
+  discipline?: string;
   sort?: string;
   order?: 'asc' | 'desc';
 }) {
