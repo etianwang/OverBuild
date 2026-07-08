@@ -154,6 +154,57 @@ enum ContractChangeType {
   other
 }
 
+enum PaymentStatus {
+  draft
+  pending
+  approved
+  paid
+  rejected
+}
+
+enum PaymentMethod {
+  cash
+  bank
+}
+
+enum ReimbursementStatus {
+  draft
+  pending
+  approved
+  rejected
+  paid
+}
+
+enum BudgetStatus {
+  active
+  inactive
+}
+
+enum InvoiceType {
+  sales
+  purchase
+}
+
+enum FinanceAccountType {
+  cash
+  bank
+}
+
+enum AccountTransactionType {
+  income
+  payment
+  collection
+  reimbursement
+  adjustment
+}
+
+enum CostSource {
+  procurement
+  warehouse
+  manual
+  reimbursement
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -177,6 +228,8 @@ model User {
   notifications      Notification[]
   purchaseRequests   PurchaseRequest[] @relation("PurchaseRequester")
   contractRevisions    ContractRevision[] @relation("ContractRevisor")
+  reimbursements       Reimbursement[]    @relation("ReimbursementApplicant")
+  budgetRevisions      BudgetRevision[]   @relation("BudgetRevisor")
 
   @@map("users")
 }
@@ -305,6 +358,12 @@ model Project {
   stocktakes       Stocktake[]
   contracts        Contract[]
   collections      Collection[]
+  incomes          Income[]
+  payments         Payment[]
+  reimbursements   Reimbursement[]
+  budgets          Budget[]
+  costs            Cost[]
+  invoices         Invoice[]
 
   @@index([status])
   @@index([managerId])
@@ -656,6 +715,7 @@ model PurchaseOrder {
   request  PurchaseRequest? @relation(fields: [requestId], references: [id], onDelete: SetNull)
   items    PurchaseOrderItem[]
   inbounds StockInbound[]
+  payments Payment[]
 
   @@index([projectId])
   @@index([supplierId])
@@ -867,6 +927,9 @@ model Contract {
   project   Project            @relation(fields: [projectId], references: [id])
   revisions ContractRevision[]
   collections Collection[]
+  incomes     Income[]
+  payments    Payment[]
+  invoices    Invoice[]
 
   @@index([projectId])
   @@index([status])
@@ -892,15 +955,17 @@ model ContractRevision {
 }
 
 model Collection {
-  id             String   @id @default(uuid())
-  code           String   @unique
-  contractId     String   @map("contract_id")
-  projectId      String   @map("project_id")
-  amountAmount   Decimal  @map("amount_amount") @db.Decimal(18, 4)
-  amountCurrency String   @map("amount_currency") @db.Char(3)
-  collectedAt    DateTime @map("collected_at") @db.Date
+  id             String             @id @default(uuid())
+  code           String             @unique
+  contractId     String             @map("contract_id")
+  projectId      String             @map("project_id")
+  amountAmount   Decimal            @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency String             @map("amount_currency") @db.Char(3)
+  collectedAt    DateTime           @map("collected_at") @db.Date
+  accountType    FinanceAccountType @map("account_type")
+  accountId      String             @map("account_id")
   remark         String?
-  createdAt      DateTime @default(now()) @map("created_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
 
   contract Contract @relation(fields: [contractId], references: [id])
   project  Project  @relation(fields: [projectId], references: [id])
@@ -908,4 +973,216 @@ model Collection {
   @@index([contractId])
   @@index([projectId])
   @@map("collections")
+}
+
+model Income {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  projectId      String   @map("project_id")
+  contractId     String?  @map("contract_id")
+  amountAmount   Decimal  @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency String   @map("amount_currency") @db.Char(3)
+  receivedAt     DateTime @map("received_at") @db.Date
+  summary        String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  project  Project   @relation(fields: [projectId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+
+  @@index([projectId])
+  @@index([contractId])
+  @@map("incomes")
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  code            String        @unique
+  projectId       String        @map("project_id")
+  payee           String
+  amountAmount    Decimal       @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency  String        @map("amount_currency") @db.Char(3)
+  paymentMethod   PaymentMethod @map("payment_method")
+  accountType     FinanceAccountType @map("account_type")
+  accountId       String        @map("account_id")
+  status          PaymentStatus @default(draft)
+  purchaseOrderId String?       @map("purchase_order_id")
+  contractId      String?       @map("contract_id")
+  approvedAt      DateTime?     @map("approved_at")
+  paidAt          DateTime?     @map("paid_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  project       Project        @relation(fields: [projectId], references: [id])
+  purchaseOrder PurchaseOrder? @relation(fields: [purchaseOrderId], references: [id])
+  contract      Contract?      @relation(fields: [contractId], references: [id])
+
+  @@index([projectId])
+  @@index([status])
+  @@map("payments")
+}
+
+model Reimbursement {
+  id             String              @id @default(uuid())
+  code           String              @unique
+  projectId      String              @map("project_id")
+  applicantId    String              @map("applicant_id")
+  amountAmount   Decimal             @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency String              @map("amount_currency") @db.Char(3)
+  description    String?
+  status         ReimbursementStatus @default(draft)
+  paidAt         DateTime?           @map("paid_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  project   Project @relation(fields: [projectId], references: [id])
+  applicant User    @relation("ReimbursementApplicant", fields: [applicantId], references: [id])
+
+  @@index([projectId])
+  @@index([applicantId])
+  @@index([status])
+  @@map("reimbursements")
+}
+
+model Budget {
+  id             String       @id @default(uuid())
+  projectId      String       @map("project_id")
+  category       String
+  amountAmount   Decimal      @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency String       @map("amount_currency") @db.Char(3)
+  status         BudgetStatus @default(active)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  project   Project          @relation(fields: [projectId], references: [id])
+  revisions BudgetRevision[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("budgets")
+}
+
+model BudgetRevision {
+  id          String   @id @default(uuid())
+  budgetId    String   @map("budget_id")
+  before      Json
+  after       Json
+  reason      String?
+  changedById String   @map("changed_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  budget    Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  changedBy User   @relation("BudgetRevisor", fields: [changedById], references: [id])
+
+  @@index([budgetId])
+  @@map("budget_revisions")
+}
+
+model Cost {
+  id             String     @id @default(uuid())
+  projectId      String     @map("project_id")
+  source         CostSource
+  sourceId       String?    @map("source_id")
+  category       String
+  amountAmount   Decimal    @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency String     @map("amount_currency") @db.Char(3)
+  occurredAt     DateTime   @map("occurred_at") @db.Date
+  description    String?
+  createdAt      DateTime   @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+  @@index([source])
+  @@map("costs")
+}
+
+model Invoice {
+  id             String      @id @default(uuid())
+  invoiceNo      String      @unique @map("invoice_no")
+  type           InvoiceType
+  amountAmount   Decimal     @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency String      @map("amount_currency") @db.Char(3)
+  taxRate        Decimal?    @map("tax_rate") @db.Decimal(8, 4)
+  issuedAt       DateTime    @map("issued_at") @db.Date
+  contractId     String?     @map("contract_id")
+  projectId      String?     @map("project_id")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  contract Contract? @relation(fields: [contractId], references: [id])
+  project  Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([type])
+  @@index([projectId])
+  @@map("invoices")
+}
+
+model CashAccount {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  balanceAmount   Decimal  @default(0) @map("balance_amount") @db.Decimal(18, 4)
+  balanceCurrency String   @map("balance_currency") @db.Char(3)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("cash_accounts")
+}
+
+model BankAccount {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  name            String
+  bankName        String   @map("bank_name")
+  accountNo       String   @map("account_no")
+  balanceAmount   Decimal  @default(0) @map("balance_amount") @db.Decimal(18, 4)
+  balanceCurrency String   @map("balance_currency") @db.Char(3)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("bank_accounts")
+}
+
+model AccountTransaction {
+  id                 String                 @id @default(uuid())
+  accountType        FinanceAccountType     @map("account_type")
+  accountId          String                 @map("account_id")
+  transactionType    AccountTransactionType @map("transaction_type")
+  amountAmount       Decimal                @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency     String                 @map("amount_currency") @db.Char(3)
+  balanceAfterAmount Decimal                @map("balance_after_amount") @db.Decimal(18, 4)
+  referenceType      String?                @map("reference_type")
+  referenceId        String?                @map("reference_id")
+  occurredAt         DateTime               @map("occurred_at")
+  remark             String?
+  createdAt          DateTime               @default(now()) @map("created_at")
+
+  @@index([accountType, accountId])
+  @@index([occurredAt])
+  @@map("account_transactions")
+}
+
+model Currency {
+  code      String   @id @db.Char(3)
+  name      String
+  symbol    String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id            String   @id @default(uuid())
+  baseCurrency  String   @map("base_currency") @db.Char(3)
+  quoteCurrency String   @map("quote_currency") @db.Char(3)
+  rate          Decimal  @db.Decimal(18, 8)
+  rateDate      DateTime @map("rate_date") @db.Date
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([baseCurrency, quoteCurrency, rateDate])
+  @@index([rateDate])
+  @@map("exchange_rates")
 }

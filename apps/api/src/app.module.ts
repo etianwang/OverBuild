@@ -10,6 +10,7 @@ import { MaterialModule } from './modules/material/material.module';
 import { ProcurementModule } from './modules/procurement/procurement.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { ContractModule } from './modules/contract/contract.module';
+import { FinanceModule } from './modules/finance/finance.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -25,6 +26,7 @@ import { HealthController } from './health.controller';
     ProcurementModule,
     WarehouseModule,
     ContractModule,
+    FinanceModule,
   ],
   controllers: [HealthController],
 })

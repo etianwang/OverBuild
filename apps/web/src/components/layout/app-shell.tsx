@@ -16,6 +16,7 @@ const NAV = [
   { href: '/procurement', label: '采购', permission: 'procurement.request.read' },
   { href: '/warehouse', label: '仓库', permission: 'warehouse.read' },
   { href: '/contracts', label: '合同', permission: 'contract.read' },
+  { href: '/finance', label: '财务', permission: 'finance.income.read' },
   { href: '/approvals', label: '审批', permission: null },
   { href: '/users', label: '用户', permission: 'auth.user.read' },
   { href: '/audit-logs', label: '审计日志', permission: 'audit.read' },

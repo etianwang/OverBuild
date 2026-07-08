@@ -89,6 +89,40 @@ const PERMISSIONS = [
   { code: 'contract.revision.create', name: '记录合同变更', module: 'contract' },
   { code: 'contract.collection.read', name: '查看合同回款', module: 'contract' },
   { code: 'contract.export', name: '导出合同', module: 'contract' },
+  { code: 'finance.income.read', name: '查看收入', module: 'finance' },
+  { code: 'finance.income.create', name: '登记收入', module: 'finance' },
+  { code: 'finance.income.export', name: '导出收入', module: 'finance' },
+  { code: 'finance.payment.read', name: '查看付款', module: 'finance' },
+  { code: 'finance.payment.create', name: '创建付款', module: 'finance' },
+  { code: 'finance.payment.update', name: '编辑付款', module: 'finance' },
+  { code: 'finance.payment.submit', name: '提交付款审批', module: 'finance' },
+  { code: 'finance.payment.execute', name: '执行付款', module: 'finance' },
+  { code: 'finance.payment.export', name: '导出付款', module: 'finance' },
+  { code: 'finance.collection.read', name: '查看回款', module: 'finance' },
+  { code: 'finance.collection.create', name: '登记回款', module: 'finance' },
+  { code: 'finance.collection.export', name: '导出回款', module: 'finance' },
+  { code: 'finance.reimbursement.read', name: '查看报销', module: 'finance' },
+  { code: 'finance.reimbursement.create', name: '创建报销', module: 'finance' },
+  { code: 'finance.reimbursement.update', name: '编辑报销', module: 'finance' },
+  { code: 'finance.reimbursement.submit', name: '提交报销', module: 'finance' },
+  { code: 'finance.reimbursement.export', name: '导出报销', module: 'finance' },
+  { code: 'finance.budget.read', name: '查看预算', module: 'finance' },
+  { code: 'finance.budget.create', name: '编制预算', module: 'finance' },
+  { code: 'finance.budget.update', name: '调整预算', module: 'finance' },
+  { code: 'finance.budget.deactivate', name: '停用预算', module: 'finance' },
+  { code: 'finance.cost.read', name: '查看成本', module: 'finance' },
+  { code: 'finance.cost.create', name: '补录成本', module: 'finance' },
+  { code: 'finance.invoice.read', name: '查看发票', module: 'finance' },
+  { code: 'finance.invoice.create', name: '登记发票', module: 'finance' },
+  { code: 'finance.invoice.update', name: '编辑发票', module: 'finance' },
+  { code: 'finance.invoice.export', name: '导出发票', module: 'finance' },
+  { code: 'finance.account.read', name: '查看账户', module: 'finance' },
+  { code: 'finance.report.read', name: '查看报表', module: 'finance' },
+  { code: 'finance.report.export', name: '导出报表', module: 'finance' },
+  { code: 'finance.profit.read', name: '查看项目利润', module: 'finance' },
+  { code: 'finance.currency.read', name: '查看币种', module: 'finance' },
+  { code: 'finance.exchange_rate.read', name: '查看汇率', module: 'finance' },
+  { code: 'finance.exchange_rate.create', name: '录入汇率', module: 'finance' },
 ];
 
 async function main() {
@@ -332,6 +366,29 @@ async function main() {
   await grantPerms(financeRole.id, contractPerms);
   await grantPerms(pmRole.id, pmContract);
   await grantPerms(bossRole.id, contractReadExport);
+
+  const financePerms = await prisma.permission.findMany({
+    where: { module: 'finance' },
+  });
+  const financeReadExport = financePerms.filter(
+    (p) => p.code.endsWith('.read') || p.code.endsWith('.export'),
+  );
+  const pmFinance = financePerms.filter((p) =>
+    [
+      'finance.reimbursement.read',
+      'finance.reimbursement.create',
+      'finance.reimbursement.submit',
+      'finance.reimbursement.export',
+      'finance.budget.read',
+      'finance.cost.read',
+      'finance.report.read',
+      'finance.profit.read',
+    ].includes(p.code),
+  );
+
+  await grantPerms(financeRole.id, financePerms);
+  await grantPerms(pmRole.id, pmFinance);
+  await grantPerms(bossRole.id, financeReadExport);
 
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
@@ -786,6 +843,190 @@ async function main() {
       signedAt: new Date('2026-01-15'),
       startDate: new Date('2026-02-01'),
       endDate: new Date('2027-12-31'),
+    },
+  });
+
+  const demoContract = await prisma.contract.findUniqueOrThrow({
+    where: { code: 'CTR-DEMO-001' },
+  });
+
+  for (const currency of [
+    { code: 'CNY', name: '人民币', symbol: '¥' },
+    { code: 'USD', name: '美元', symbol: '$' },
+    { code: 'EUR', name: '欧元', symbol: '€' },
+    { code: 'XAF', name: '中非法郎', symbol: 'FCFA' },
+  ]) {
+    await prisma.currency.upsert({
+      where: { code: currency.code },
+      update: { name: currency.name, symbol: currency.symbol },
+      create: currency,
+    });
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  await prisma.exchangeRate.upsert({
+    where: {
+      baseCurrency_quoteCurrency_rateDate: {
+        baseCurrency: 'CNY',
+        quoteCurrency: 'USD',
+        rateDate: today,
+      },
+    },
+    update: { rate: 0.138 },
+    create: {
+      baseCurrency: 'CNY',
+      quoteCurrency: 'USD',
+      rate: 0.138,
+      rateDate: today,
+    },
+  });
+
+  const cashAccount = await prisma.cashAccount.upsert({
+    where: { code: 'CASH-001' },
+    update: { name: '项目现金账户', balanceAmount: 500000, balanceCurrency: 'CNY' },
+    create: {
+      code: 'CASH-001',
+      name: '项目现金账户',
+      balanceAmount: 500000,
+      balanceCurrency: 'CNY',
+    },
+  });
+
+  const bankAccount = await prisma.bankAccount.upsert({
+    where: { code: 'BANK-001' },
+    update: {
+      name: '杜阿拉项目主账户',
+      bankName: '喀麦隆商业银行',
+      accountNo: 'CM-88291001',
+      balanceAmount: 2000000,
+      balanceCurrency: 'CNY',
+    },
+    create: {
+      code: 'BANK-001',
+      name: '杜阿拉项目主账户',
+      bankName: '喀麦隆商业银行',
+      accountNo: 'CM-88291001',
+      balanceAmount: 2000000,
+      balanceCurrency: 'CNY',
+    },
+  });
+
+  await prisma.budget.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000b01' },
+    update: {
+      projectId: demoProject.id,
+      category: '土建工程',
+      amountAmount: 8000000,
+      amountCurrency: 'CNY',
+      status: 'active',
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000b01',
+      projectId: demoProject.id,
+      category: '土建工程',
+      amountAmount: 8000000,
+      amountCurrency: 'CNY',
+    },
+  });
+
+  await prisma.income.upsert({
+    where: { code: 'INC-DEMO-001' },
+    update: {
+      projectId: demoProject.id,
+      contractId: demoContract.id,
+      amountAmount: 500000,
+      amountCurrency: 'CNY',
+      receivedAt: new Date('2026-03-01'),
+      summary: '首期进度款',
+    },
+    create: {
+      code: 'INC-DEMO-001',
+      projectId: demoProject.id,
+      contractId: demoContract.id,
+      amountAmount: 500000,
+      amountCurrency: 'CNY',
+      receivedAt: new Date('2026-03-01'),
+      summary: '首期进度款',
+    },
+  });
+
+  await prisma.collection.upsert({
+    where: { code: 'COL-DEMO-001' },
+    update: {
+      contractId: demoContract.id,
+      projectId: demoProject.id,
+      amountAmount: 1000000,
+      amountCurrency: 'CNY',
+      collectedAt: new Date('2026-04-01'),
+      accountType: 'bank',
+      accountId: bankAccount.id,
+      remark: '客户回款',
+    },
+    create: {
+      code: 'COL-DEMO-001',
+      contractId: demoContract.id,
+      projectId: demoProject.id,
+      amountAmount: 1000000,
+      amountCurrency: 'CNY',
+      collectedAt: new Date('2026-04-01'),
+      accountType: 'bank',
+      accountId: bankAccount.id,
+      remark: '客户回款',
+    },
+  });
+
+  await prisma.contract.update({
+    where: { id: demoContract.id },
+    data: {
+      collectedAmountAmount: 1000000,
+      collectedAmountCurrency: 'CNY',
+    },
+  });
+
+  await prisma.cost.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000c01' },
+    update: {
+      projectId: demoProject.id,
+      source: 'manual',
+      category: '材料采购',
+      amountAmount: 350000,
+      amountCurrency: 'CNY',
+      occurredAt: new Date('2026-05-01'),
+      description: '钢材采购成本',
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000c01',
+      projectId: demoProject.id,
+      source: 'manual',
+      category: '材料采购',
+      amountAmount: 350000,
+      amountCurrency: 'CNY',
+      occurredAt: new Date('2026-05-01'),
+      description: '钢材采购成本',
+    },
+  });
+
+  await prisma.invoice.upsert({
+    where: { invoiceNo: 'INV-DEMO-001' },
+    update: {
+      type: 'sales',
+      amountAmount: 1000000,
+      amountCurrency: 'CNY',
+      taxRate: 0.13,
+      issuedAt: new Date('2026-04-01'),
+      contractId: demoContract.id,
+      projectId: demoProject.id,
+    },
+    create: {
+      invoiceNo: 'INV-DEMO-001',
+      type: 'sales',
+      amountAmount: 1000000,
+      amountCurrency: 'CNY',
+      taxRate: 0.13,
+      issuedAt: new Date('2026-04-01'),
+      contractId: demoContract.id,
+      projectId: demoProject.id,
     },
   });
 

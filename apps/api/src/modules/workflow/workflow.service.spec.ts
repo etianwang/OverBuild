@@ -53,11 +53,16 @@ describe('WorkflowService', () => {
     vi.clearAllMocks();
     const procurementService = { syncRequestApproval: vi.fn() };
     const contractService = { syncContractApproval: vi.fn() };
+    const financeService = {
+      syncPaymentApproval: vi.fn(),
+      syncReimbursementApproval: vi.fn(),
+    };
     service = new WorkflowService(
       workflowRepository as never,
       auditLogService as never,
       procurementService as never,
       contractService as never,
+      financeService as never,
     );
   });
 

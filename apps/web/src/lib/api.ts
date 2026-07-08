@@ -1467,3 +1467,224 @@ export async function exportContracts(params?: { q?: string; projectId?: string 
   link.click();
   URL.revokeObjectURL(url);
 }
+
+// ── Finance ──
+
+export const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  pending: '待审批',
+  approved: '已审批',
+  paid: '已付款',
+  rejected: '已驳回',
+};
+
+export interface FinanceMoney {
+  amount: number;
+  currency: string;
+}
+
+export interface IncomeItem {
+  id: string;
+  code: string;
+  projectId: string;
+  contractId?: string | null;
+  amount: FinanceMoney;
+  receivedAt: string;
+  summary?: string | null;
+  project?: { id: string; code: string; name: string };
+}
+
+export interface PaymentItem {
+  id: string;
+  code: string;
+  projectId: string;
+  payee: string;
+  amount: FinanceMoney;
+  paymentMethod: string;
+  accountType: string;
+  accountId: string;
+  status: string;
+  project?: { id: string; code: string; name: string };
+}
+
+export interface CollectionItem {
+  id: string;
+  code: string;
+  contractId: string;
+  projectId: string;
+  amount: FinanceMoney;
+  collectedAt: string;
+  contract?: { id: string; code: string; name: string };
+  project?: { id: string; code: string; name: string };
+}
+
+export interface BudgetItem {
+  id: string;
+  projectId: string;
+  category: string;
+  amount: FinanceMoney;
+  status: string;
+  project?: { id: string; code: string; name: string };
+}
+
+export interface ProfitItem {
+  projectId: string;
+  projectCode: string;
+  projectName: string;
+  income: number;
+  cost: number;
+  profit: number;
+  profitRate: number;
+}
+
+export interface CashAccountItem {
+  id: string;
+  code: string;
+  name: string;
+  balance: FinanceMoney;
+}
+
+export interface BankAccountItem {
+  id: string;
+  code: string;
+  name: string;
+  bankName: string;
+  accountNo: string;
+  balance: FinanceMoney;
+}
+
+export async function listIncomes(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  return apiFetch<Paginated<IncomeItem>>(`/finance/incomes?${search}`);
+}
+
+export async function createIncome(data: {
+  code: string;
+  projectId: string;
+  contractId?: string;
+  amount: FinanceMoney;
+  receivedAt: string;
+  summary?: string;
+}) {
+  return apiFetch<IncomeItem>('/finance/incomes', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listPayments(params?: {
+  page?: number;
+  pageSize?: number;
+  projectId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.projectId) search.set('projectId', params.projectId);
+  return apiFetch<Paginated<PaymentItem>>(`/finance/payments?${search}`);
+}
+
+export async function createPayment(data: {
+  code: string;
+  projectId: string;
+  payee: string;
+  amount: FinanceMoney;
+  paymentMethod: string;
+  accountType: string;
+  accountId: string;
+}) {
+  return apiFetch<PaymentItem>('/finance/payments', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function submitPayment(id: string) {
+  return apiFetch<PaymentItem>(`/finance/payments/${id}/submit`, {
+    method: 'POST',
+  });
+}
+
+export async function listCollections(params?: {
+  page?: number;
+  pageSize?: number;
+  projectId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.projectId) search.set('projectId', params.projectId);
+  return apiFetch<Paginated<CollectionItem>>(`/finance/collections?${search}`);
+}
+
+export async function createCollection(data: {
+  code: string;
+  contractId: string;
+  amount: FinanceMoney;
+  collectedAt: string;
+  accountType: string;
+  accountId: string;
+  remark?: string;
+}) {
+  return apiFetch<CollectionItem>('/finance/collections', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listBudgets(params?: { projectId?: string }) {
+  const search = new URLSearchParams({ page: '1', pageSize: '50' });
+  if (params?.projectId) search.set('projectId', params.projectId);
+  return apiFetch<Paginated<BudgetItem>>(`/finance/budgets?${search}`);
+}
+
+export async function createBudget(data: {
+  projectId: string;
+  category: string;
+  amount: FinanceMoney;
+}) {
+  return apiFetch<BudgetItem>('/finance/budgets', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getProfitSummary() {
+  return apiFetch<{ list: ProfitItem[]; total: number }>(
+    '/finance/projects/profit-summary',
+  );
+}
+
+export async function getDailyReport(date?: string) {
+  const search = date ? `?date=${date}` : '';
+  return apiFetch<{
+    date: string;
+    income: { count: number; amount: number };
+    collection: { count: number; amount: number };
+    payment: { count: number; amount: number };
+  }>(`/finance/reports/daily${search}`);
+}
+
+export async function listCashAccounts() {
+  return apiFetch<{ list: CashAccountItem[]; total: number }>(
+    '/finance/cash-accounts',
+  );
+}
+
+export async function listBankAccounts() {
+  return apiFetch<{ list: BankAccountItem[]; total: number }>(
+    '/finance/bank-accounts',
+  );
+}

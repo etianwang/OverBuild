@@ -143,6 +143,7 @@ npm run db:seed        # 同步种子数据并再次扫描
 | 2026-07-06 | procurement | purchase_requests, purchase_orders, suppliers, quotations |
 | 2026-07-06 | warehouse | warehouses, stock_inbound, stock_outbound, stock_balances, stocktakes |
 | 2026-07-08 | contract | contracts, contract_revisions, collections |
+| 2026-07-08 | finance | incomes, payments, reimbursements, budgets, costs, invoices, cash_accounts, bank_accounts, account_transactions, currencies, exchange_rates |
 
 ---
 

@@ -212,12 +212,13 @@ npm run test:e2e    # E2E 通过
 
 ### 10. 财务 (finance)
 
-- [ ] 读文档：`docs/modules/finance.md`
-- [ ] 数据库：`incomes`、`payments`、`collections`、`reimbursements`、`budgets`、`costs`、`invoices`、`cash_accounts`、`bank_accounts`、`exchange_rates`
-- [ ] API：收入、付款、回款、报销、预算、成本、发票、报表
-- [ ] 前端：财务各子页面、日报/月报
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/finance.md`
+- [x] 数据库：`incomes`、`payments`、`collections`、`reimbursements`、`budgets`、`costs`、`invoices`、`cash_accounts`、`bank_accounts`、`exchange_rates`
+- [x] API：收入、付款、回款、报销、预算、成本、发票、报表
+- [x] 前端：财务各子页面、日报/月报
+- [x] 测试：finance.service.spec.ts、finance.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 11. 文档 (document)
 
@@ -316,9 +317,10 @@ graph TD
 | D | procurement | ✅ 完成 |
 | D | warehouse | ✅ 完成 |
 | E | contract | ✅ 完成 |
-| E–G | finance → dashboard | 未开始 |
+| E | finance | ✅ 完成 |
+| F–G | document → dashboard | 未开始 |
 
-**下一步**：**模块 10 finance（财务）**
+**下一步**：**模块 11 document（文档）**
 
 ---
 
