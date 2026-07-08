@@ -9,6 +9,7 @@ import { WorkflowModule } from './modules/workflow/workflow.module';
 import { MaterialModule } from './modules/material/material.module';
 import { ProcurementModule } from './modules/procurement/procurement.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
+import { ContractModule } from './modules/contract/contract.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -23,6 +24,7 @@ import { HealthController } from './health.controller';
     MaterialModule,
     ProcurementModule,
     WarehouseModule,
+    ContractModule,
   ],
   controllers: [HealthController],
 })

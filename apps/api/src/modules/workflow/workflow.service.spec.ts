@@ -52,10 +52,12 @@ describe('WorkflowService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const procurementService = { syncRequestApproval: vi.fn() };
+    const contractService = { syncContractApproval: vi.fn() };
     service = new WorkflowService(
       workflowRepository as never,
       auditLogService as never,
       procurementService as never,
+      contractService as never,
     );
   });
 

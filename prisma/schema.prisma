@@ -133,6 +133,27 @@ enum OutboundType {
   transfer
 }
 
+enum ContractType {
+  construction
+  procurement
+  service
+  other
+}
+
+enum ContractStatus {
+  draft
+  active
+  completed
+  terminated
+}
+
+enum ContractChangeType {
+  amount
+  period
+  terms
+  other
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -155,6 +176,7 @@ model User {
   approvalRecords    ApprovalRecord[]   @relation("ApprovalApprover")
   notifications      Notification[]
   purchaseRequests   PurchaseRequest[] @relation("PurchaseRequester")
+  contractRevisions    ContractRevision[] @relation("ContractRevisor")
 
   @@map("users")
 }
@@ -281,6 +303,8 @@ model Project {
   stockOutbounds   StockOutbound[]
   stockBalances    StockBalance[]
   stocktakes       Stocktake[]
+  contracts        Contract[]
+  collections      Collection[]
 
   @@index([status])
   @@index([managerId])
@@ -816,4 +840,72 @@ model StocktakeItem {
 
   @@index([stocktakeId])
   @@map("stocktake_items")
+}
+
+model Contract {
+  id                      String         @id @default(uuid())
+  code                    String         @unique
+  name                    String
+  nameFr                  String?        @map("name_fr")
+  projectId               String         @map("project_id")
+  partyA                  String         @map("party_a")
+  partyB                  String         @map("party_b")
+  amountAmount            Decimal        @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency          String         @map("amount_currency") @db.Char(3)
+  type                    ContractType
+  signedAt                DateTime?      @map("signed_at") @db.Date
+  startDate               DateTime?      @map("start_date") @db.Date
+  endDate                 DateTime?      @map("end_date") @db.Date
+  status                  ContractStatus @default(draft)
+  collectedAmountAmount   Decimal        @default(0) @map("collected_amount_amount") @db.Decimal(18, 4)
+  collectedAmountCurrency String?        @map("collected_amount_currency") @db.Char(3)
+  attachmentUrl           String?        @map("attachment_url")
+  createdAt               DateTime       @default(now()) @map("created_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
+  deletedAt               DateTime?      @map("deleted_at")
+
+  project   Project            @relation(fields: [projectId], references: [id])
+  revisions ContractRevision[]
+  collections Collection[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([type])
+  @@map("contracts")
+}
+
+model ContractRevision {
+  id          String             @id @default(uuid())
+  contractId  String             @map("contract_id")
+  changeType  ContractChangeType @map("change_type")
+  before      Json
+  after       Json
+  reason      String?
+  changedById String             @map("changed_by_id")
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  contract  Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  changedBy User     @relation("ContractRevisor", fields: [changedById], references: [id])
+
+  @@index([contractId])
+  @@map("contract_revisions")
+}
+
+model Collection {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  contractId     String   @map("contract_id")
+  projectId      String   @map("project_id")
+  amountAmount   Decimal  @map("amount_amount") @db.Decimal(18, 4)
+  amountCurrency String   @map("amount_currency") @db.Char(3)
+  collectedAt    DateTime @map("collected_at") @db.Date
+  remark         String?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  contract Contract @relation(fields: [contractId], references: [id])
+  project  Project  @relation(fields: [projectId], references: [id])
+
+  @@index([contractId])
+  @@index([projectId])
+  @@map("collections")
 }

@@ -202,12 +202,13 @@ npm run test:e2e    # E2E 通过
 
 ### 9. 合同 (contract)
 
-- [ ] 读文档：`docs/modules/contract.md`
-- [ ] 数据库：`contracts`、`contract_revisions`
-- [ ] API：合同 CRUD、变更、审批、回款关联
-- [ ] 前端：合同列表、详情、表单
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/contract.md`
+- [x] 数据库：`contracts`、`contract_revisions`
+- [x] API：合同 CRUD、变更、审批、回款关联
+- [x] 前端：合同列表、详情、表单
+- [x] 测试：contract.service.spec.ts、contract.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 10. 财务 (finance)
 
@@ -314,9 +315,10 @@ graph TD
 | D | material | ✅ 完成 |
 | D | procurement | ✅ 完成 |
 | D | warehouse | ✅ 完成 |
-| E–G | contract → dashboard | 未开始 |
+| E | contract | ✅ 完成 |
+| E–G | finance → dashboard | 未开始 |
 
-**下一步**：**模块 9 contract（合同）**
+**下一步**：**模块 10 finance（财务）**
 
 ---
 

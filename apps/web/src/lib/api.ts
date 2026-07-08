@@ -1363,3 +1363,107 @@ export async function listStockBalances(params?: {
   if (params?.q) search.set('q', params.q);
   return apiFetch<Paginated<StockBalanceItem>>(`/warehouse/stock-balances?${search}`);
 }
+
+// ── Contract ──
+
+export const CONTRACT_TYPE_LABEL: Record<string, string> = {
+  construction: '施工合同',
+  procurement: '采购合同',
+  service: '服务合同',
+  other: '其他',
+};
+
+export const CONTRACT_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  active: '生效',
+  completed: '已完成',
+  terminated: '已终止',
+};
+
+export interface ContractItem {
+  id: string;
+  code: string;
+  name: string;
+  nameFr?: string | null;
+  projectId: string;
+  partyA: string;
+  partyB: string;
+  amount: MoneyValue;
+  type: string;
+  status: string;
+  signedAt?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  collectedAmount: MoneyValue;
+  attachmentUrl?: string | null;
+  project?: { id: string; code: string; name: string };
+  approval?: { id: string; status: string; code: string } | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listContracts(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.status) search.set('status', params.status);
+  return apiFetch<Paginated<ContractItem>>(`/contracts?${search}`);
+}
+
+export async function getContract(id: string) {
+  return apiFetch<ContractItem>(`/contracts/${id}`);
+}
+
+export async function createContract(data: {
+  code: string;
+  name: string;
+  nameFr?: string;
+  projectId: string;
+  partyA: string;
+  partyB: string;
+  amount: MoneyValue;
+  type: string;
+  signedAt?: string;
+  startDate?: string;
+  endDate?: string;
+}) {
+  return apiFetch<ContractItem>('/contracts', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function submitContract(id: string) {
+  return apiFetch<ContractItem>(`/contracts/${id}/submit`, { method: 'POST' });
+}
+
+export async function exportContracts(params?: { q?: string; projectId?: string }) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const search = new URLSearchParams();
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  const res = await fetch(`${API_URL}/contracts/export?${search}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('导出失败');
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition');
+  const match = disposition?.match(/filename="(.+)"/);
+  const filename = match?.[1] ?? `contracts-${Date.now()}.csv`;
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}

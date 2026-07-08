@@ -30,6 +30,7 @@ import {
   PAYMENT_AMOUNT_LIMIT,
 } from './workflow.types';
 import { ProcurementService } from '../procurement/procurement.service';
+import { ContractService } from '../contract/contract.service';
 
 @Injectable()
 export class WorkflowService {
@@ -38,6 +39,8 @@ export class WorkflowService {
     private readonly auditLogService: AuditLogService,
     @Inject(forwardRef(() => ProcurementService))
     private readonly procurementService: ProcurementService,
+    @Inject(forwardRef(() => ContractService))
+    private readonly contractService: ContractService,
   ) {}
 
   private isAdmin(user: AuthUser) {
@@ -459,6 +462,12 @@ export class WorkflowService {
           'approved',
         );
       }
+      if (instance.type === ApprovalType.contract) {
+        await this.contractService.syncContractApproval(
+          instance.businessId,
+          'approved',
+        );
+      }
     } else {
       const nextNode = nodes[currentIndex + 1];
       updated = await this.workflowRepository.updateInstance(instance.id, {
@@ -510,6 +519,12 @@ export class WorkflowService {
 
     if (instance.type === ApprovalType.purchase_request) {
       await this.procurementService.syncRequestApproval(
+        instance.businessId,
+        'rejected',
+      );
+    }
+    if (instance.type === ApprovalType.contract) {
+      await this.contractService.syncContractApproval(
         instance.businessId,
         'rejected',
       );

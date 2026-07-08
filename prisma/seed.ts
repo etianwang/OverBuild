@@ -80,6 +80,15 @@ const PERMISSIONS = [
   { code: 'warehouse.balance.read', name: '查看库存余额', module: 'warehouse' },
   { code: 'warehouse.balance.export', name: '导出库存报表', module: 'warehouse' },
   { code: 'warehouse.transaction.read', name: '查看库存流水', module: 'warehouse' },
+  { code: 'contract.read', name: '查看合同', module: 'contract' },
+  { code: 'contract.create', name: '创建合同', module: 'contract' },
+  { code: 'contract.update', name: '编辑合同', module: 'contract' },
+  { code: 'contract.delete', name: '删除合同', module: 'contract' },
+  { code: 'contract.submit', name: '提交合同审批', module: 'contract' },
+  { code: 'contract.revision.read', name: '查看合同变更', module: 'contract' },
+  { code: 'contract.revision.create', name: '记录合同变更', module: 'contract' },
+  { code: 'contract.collection.read', name: '查看合同回款', module: 'contract' },
+  { code: 'contract.export', name: '导出合同', module: 'contract' },
 ];
 
 async function main() {
@@ -302,6 +311,27 @@ async function main() {
   await grantPerms(procurementRole.id, procurementWarehouse);
   await grantPerms(pmRole.id, pmWarehouse);
   await grantPerms(bossRole.id, warehouseReadExport);
+
+  const contractPerms = await prisma.permission.findMany({
+    where: { module: 'contract' },
+  });
+  const contractReadExport = contractPerms.filter(
+    (p) => p.code.endsWith('.read') || p.code.endsWith('.export'),
+  );
+  const pmContract = contractPerms.filter((p) =>
+    [
+      'contract.read',
+      'contract.create',
+      'contract.submit',
+      'contract.export',
+      'contract.revision.read',
+      'contract.collection.read',
+    ].includes(p.code),
+  );
+
+  await grantPerms(financeRole.id, contractPerms);
+  await grantPerms(pmRole.id, pmContract);
+  await grantPerms(bossRole.id, contractReadExport);
 
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
@@ -724,6 +754,40 @@ async function main() {
       },
     });
   }
+
+  await prisma.contract.upsert({
+    where: { code: 'CTR-DEMO-001' },
+    update: {
+      name: '杜阿拉综合楼施工总包合同',
+      nameFr: 'Contrat général Immeuble Douala',
+      projectId: demoProject.id,
+      partyA: '喀麦隆建设部',
+      partyB: 'OverBuild 工程有限公司',
+      amountAmount: 15000000,
+      amountCurrency: 'CNY',
+      type: 'construction',
+      status: 'active',
+      signedAt: new Date('2026-01-15'),
+      startDate: new Date('2026-02-01'),
+      endDate: new Date('2027-12-31'),
+    },
+    create: {
+      code: 'CTR-DEMO-001',
+      name: '杜阿拉综合楼施工总包合同',
+      nameFr: 'Contrat général Immeuble Douala',
+      projectId: demoProject.id,
+      partyA: '喀麦隆建设部',
+      partyB: 'OverBuild 工程有限公司',
+      amountAmount: 15000000,
+      amountCurrency: 'CNY',
+      collectedAmountCurrency: 'CNY',
+      type: 'construction',
+      status: 'active',
+      signedAt: new Date('2026-01-15'),
+      startDate: new Date('2026-02-01'),
+      endDate: new Date('2027-12-31'),
+    },
+  });
 
   const fixStats = await fixTextContent(prisma);
   const fixedCount = fixStats.reduce((sum, item) => sum + item.fixed, 0);
