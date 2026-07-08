@@ -205,6 +205,31 @@ enum CostSource {
   reimbursement
 }
 
+enum DocumentStatus {
+  active
+  archived
+}
+
+enum DocumentFileType {
+  pdf
+  dwg
+  image
+  office
+}
+
+enum TranslationSourceType {
+  document
+  drawing
+  entity
+}
+
+enum TranslationTaskStatus {
+  pending
+  auto
+  manual
+  completed
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -230,6 +255,8 @@ model User {
   contractRevisions    ContractRevision[] @relation("ContractRevisor")
   reimbursements       Reimbursement[]    @relation("ReimbursementApplicant")
   budgetRevisions      BudgetRevision[]   @relation("BudgetRevisor")
+  createdDocuments     Document[]         @relation("DocumentCreator")
+  uploadedDocVersions  DocumentVersion[]  @relation("DocumentUploader")
 
   @@map("users")
 }
@@ -364,6 +391,8 @@ model Project {
   budgets          Budget[]
   costs            Cost[]
   invoices         Invoice[]
+  documentCategories DocumentCategory[]
+  documents        Document[]
 
   @@index([status])
   @@index([managerId])
@@ -1185,4 +1214,82 @@ model ExchangeRate {
   @@unique([baseCurrency, quoteCurrency, rateDate])
   @@index([rateDate])
   @@map("exchange_rates")
+}
+
+model DocumentCategory {
+  id        String   @id @default(uuid())
+  name      String
+  nameFr    String?  @map("name_fr")
+  projectId String?  @map("project_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project   Project?   @relation(fields: [projectId], references: [id])
+  documents Document[]
+
+  @@index([projectId])
+  @@map("document_categories")
+}
+
+model Document {
+  id             String         @id @default(uuid())
+  code           String         @unique
+  title          String
+  titleFr        String?        @map("title_fr")
+  projectId      String         @map("project_id")
+  categoryId     String?        @map("category_id")
+  tags           String[]       @default([])
+  currentVersion Int            @default(1) @map("current_version")
+  status         DocumentStatus @default(active)
+  searchText     String?        @map("search_text")
+  createdById    String         @map("created_by_id")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  project   Project           @relation(fields: [projectId], references: [id])
+  category  DocumentCategory? @relation(fields: [categoryId], references: [id])
+  createdBy User              @relation("DocumentCreator", fields: [createdById], references: [id])
+  versions  DocumentVersion[]
+
+  @@index([projectId])
+  @@index([categoryId])
+  @@index([status])
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id           String           @id @default(uuid())
+  documentId   String           @map("document_id")
+  version      Int
+  fileUrl      String           @map("file_url")
+  fileName     String           @map("file_name")
+  fileType     DocumentFileType @map("file_type")
+  fileSize     Int?             @map("file_size")
+  uploadedById String           @map("uploaded_by_id")
+  uploadedAt   DateTime         @default(now()) @map("uploaded_at")
+
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedBy User     @relation("DocumentUploader", fields: [uploadedById], references: [id])
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@map("document_versions")
+}
+
+model TranslationTask {
+  id         String                @id @default(uuid())
+  code       String                @unique
+  sourceType TranslationSourceType @map("source_type")
+  sourceId   String                @map("source_id")
+  sourceLang Locale                @map("source_lang")
+  targetLang Locale                @map("target_lang")
+  status     TranslationTaskStatus @default(pending)
+  assigneeId String?               @map("assignee_id")
+  createdAt  DateTime              @default(now()) @map("created_at")
+  updatedAt  DateTime              @updatedAt @map("updated_at")
+
+  @@index([sourceType, sourceId])
+  @@index([status])
+  @@map("translation_tasks")
 }

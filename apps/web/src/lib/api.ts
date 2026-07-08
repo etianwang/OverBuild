@@ -1688,3 +1688,139 @@ export async function listBankAccounts() {
     '/finance/bank-accounts',
   );
 }
+
+// ── Document ──
+
+export interface DocumentCategoryItem {
+  id: string;
+  name: string;
+  nameFr?: string | null;
+  projectId?: string | null;
+  project?: { id: string; code: string; name: string };
+}
+
+export interface DocumentVersionItem {
+  id: string;
+  version: number;
+  fileName: string;
+  fileType: string;
+  fileSize?: number | null;
+  uploadedAt: string;
+  uploadedBy?: { id: string; name: string };
+}
+
+export interface DocumentItem {
+  id: string;
+  code: string;
+  title: string;
+  titleFr?: string | null;
+  projectId: string;
+  categoryId?: string | null;
+  tags: string[];
+  currentVersion: number;
+  status: string;
+  project?: { id: string; code: string; name: string };
+  category?: { id: string; name: string; nameFr?: string | null } | null;
+  createdBy?: { id: string; name: string };
+  versions?: DocumentVersionItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listDocuments(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+  categoryId?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.categoryId) search.set('categoryId', params.categoryId);
+  return apiFetch<Paginated<DocumentItem>>(`/documents?${search}`);
+}
+
+export async function listDocumentCategories(projectId?: string) {
+  const search = projectId ? `?projectId=${projectId}` : '';
+  return apiFetch<{ list: DocumentCategoryItem[]; total: number }>(
+    `/document-categories${search}`,
+  );
+}
+
+export async function createDocumentCategory(data: {
+  name: string;
+  nameFr?: string;
+  projectId?: string;
+}) {
+  return apiFetch<DocumentCategoryItem>('/document-categories', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createDocument(
+  data: {
+    code: string;
+    title: string;
+    titleFr?: string;
+    projectId: string;
+    categoryId?: string;
+    tags?: string[];
+  },
+  file: File,
+) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const form = new FormData();
+  form.append('file', file);
+  form.append('code', data.code);
+  form.append('title', data.title);
+  if (data.titleFr) form.append('titleFr', data.titleFr);
+  form.append('projectId', data.projectId);
+  if (data.categoryId) form.append('categoryId', data.categoryId);
+  if (data.tags?.length) form.append('tags', JSON.stringify(data.tags));
+
+  const res = await fetch(`${API_URL}/documents`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message ?? '上传失败');
+  }
+  return json as { success: boolean; data: DocumentItem };
+}
+
+export function getDocumentPreviewUrl(id: string, version: number) {
+  return `${API_URL}/documents/${id}/versions/${version}/preview`;
+}
+
+export async function openDocumentPreview(id: string, version: number) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const res = await fetch(getDocumentPreviewUrl(id, version), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('预览失败');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+export async function submitDocumentTranslate(
+  id: string,
+  data: { sourceLang: string; targetLang: string },
+) {
+  return apiFetch<{ id: string; code: string; status: string }>(
+    `/documents/${id}/translate`,
+    {
+      method: 'POST',
+      body: JSON.stringify(data),
+    },
+  );
+}

@@ -1,5 +1,7 @@
 import { PrismaClient, Locale, UserStatus, ProjectStatus, MaterialDiscipline } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { mkdirSync, writeFileSync } from 'fs';
+import { join } from 'path';
 import { fixTextContent } from './lib/fix-text-content';
 
 const prisma = new PrismaClient();
@@ -123,6 +125,19 @@ const PERMISSIONS = [
   { code: 'finance.currency.read', name: '查看币种', module: 'finance' },
   { code: 'finance.exchange_rate.read', name: '查看汇率', module: 'finance' },
   { code: 'finance.exchange_rate.create', name: '录入汇率', module: 'finance' },
+  { code: 'document.read', name: '查看文档', module: 'document' },
+  { code: 'document.create', name: '上传文档', module: 'document' },
+  { code: 'document.update', name: '编辑文档', module: 'document' },
+  { code: 'document.delete', name: '删除文档', module: 'document' },
+  { code: 'document.version.read', name: '查看文档版本', module: 'document' },
+  { code: 'document.version.create', name: '上传新版本', module: 'document' },
+  { code: 'document.preview', name: '预览文档', module: 'document' },
+  { code: 'document.download', name: '下载文档', module: 'document' },
+  { code: 'document.translate', name: '提交文档翻译', module: 'document' },
+  { code: 'document.export', name: '导出文档', module: 'document' },
+  { code: 'document.category.read', name: '查看文档分类', module: 'document' },
+  { code: 'document.category.create', name: '新增文档分类', module: 'document' },
+  { code: 'document.category.update', name: '编辑文档分类', module: 'document' },
 ];
 
 async function main() {
@@ -389,6 +404,55 @@ async function main() {
   await grantPerms(financeRole.id, financePerms);
   await grantPerms(pmRole.id, pmFinance);
   await grantPerms(bossRole.id, financeReadExport);
+
+  const engineerRole = await prisma.role.findUniqueOrThrow({
+    where: { code: 'engineer' },
+  });
+  const translatorRole = await prisma.role.findUniqueOrThrow({
+    where: { code: 'translator' },
+  });
+
+  const documentPerms = await prisma.permission.findMany({
+    where: { module: 'document' },
+  });
+  const documentReadExport = documentPerms.filter((p) =>
+    [
+      'document.read',
+      'document.preview',
+      'document.download',
+      'document.export',
+      'document.category.read',
+    ].includes(p.code),
+  );
+  const engineerDocument = documentPerms.filter((p) =>
+    [
+      'document.read',
+      'document.create',
+      'document.update',
+      'document.version.read',
+      'document.version.create',
+      'document.preview',
+      'document.download',
+      'document.translate',
+      'document.export',
+      'document.category.read',
+    ].includes(p.code),
+  );
+  const pmDocument = documentPerms;
+  const translatorDocument = documentPerms.filter((p) =>
+    [
+      'document.read',
+      'document.preview',
+      'document.download',
+      'document.export',
+      'document.category.read',
+    ].includes(p.code),
+  );
+
+  await grantPerms(pmRole.id, pmDocument);
+  await grantPerms(engineerRole.id, engineerDocument);
+  await grantPerms(translatorRole.id, translatorDocument);
+  await grantPerms(bossRole.id, documentReadExport);
 
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
@@ -1027,6 +1091,72 @@ async function main() {
       issuedAt: new Date('2026-04-01'),
       contractId: demoContract.id,
       projectId: demoProject.id,
+    },
+  });
+
+  const demoDocCategory = await prisma.documentCategory.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000d01' },
+    update: {
+      name: '施工方案',
+      nameFr: 'Plan de construction',
+      projectId: demoProject.id,
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000d01',
+      name: '施工方案',
+      nameFr: 'Plan de construction',
+      projectId: demoProject.id,
+    },
+  });
+
+  const demoDocId = '00000000-0000-4000-8000-000000000d02';
+  const demoFileName = 'demo-plan.pdf';
+  const demoFileUrl = `documents/${demoDocId}/1/${demoFileName}`;
+  const demoFileDir = join(
+    process.cwd(),
+    'uploads',
+    'documents',
+    demoDocId,
+    '1',
+  );
+  mkdirSync(demoFileDir, { recursive: true });
+  writeFileSync(
+    join(demoFileDir, demoFileName),
+    '%PDF-1.4\n%Demo OverBuild document\n',
+  );
+
+  await prisma.document.upsert({
+    where: { code: 'DOC-DEMO-001' },
+    update: {
+      title: '杜阿拉综合楼施工方案',
+      titleFr: 'Plan Immeuble Douala',
+      projectId: demoProject.id,
+      categoryId: demoDocCategory.id,
+      tags: ['施工', '方案'],
+      searchText: '杜阿拉综合楼施工方案 plan immeuble douala 施工 方案',
+      currentVersion: 1,
+    },
+    create: {
+      id: demoDocId,
+      code: 'DOC-DEMO-001',
+      title: '杜阿拉综合楼施工方案',
+      titleFr: 'Plan Immeuble Douala',
+      projectId: demoProject.id,
+      categoryId: demoDocCategory.id,
+      tags: ['施工', '方案'],
+      searchText: '杜阿拉综合楼施工方案 plan immeuble douala 施工 方案',
+      currentVersion: 1,
+      createdById: pmUser.id,
+      versions: {
+        create: {
+          version: 1,
+          fileUrl: demoFileUrl,
+          fileName: demoFileName,
+          fileType: 'pdf',
+          fileSize: 48,
+          uploadedById: pmUser.id,
+        },
+      },
     },
   });
 

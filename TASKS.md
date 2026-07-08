@@ -222,12 +222,13 @@ npm run test:e2e    # E2E 通过
 
 ### 11. 文档 (document)
 
-- [ ] 读文档：`docs/modules/document.md`
-- [ ] 数据库：`documents`、`document_versions`、`document_categories`
-- [ ] API：上传、版本、预览、分类
-- [ ] 前端：文档列表、上传、预览
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/document.md`
+- [x] 数据库：`documents`、`document_versions`、`document_categories`
+- [x] API：上传、版本、预览、分类
+- [x] 前端：文档列表、上传、预览
+- [x] 测试：document.service.spec.ts、document.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 12. 图纸 (drawing)
 
@@ -318,9 +319,10 @@ graph TD
 | D | warehouse | ✅ 完成 |
 | E | contract | ✅ 完成 |
 | E | finance | ✅ 完成 |
-| F–G | document → dashboard | 未开始 |
+| F | document | ✅ 完成 |
+| F–G | drawing → dashboard | 未开始 |
 
-**下一步**：**模块 11 document（文档）**
+**下一步**：**模块 12 drawing（图纸）**
 
 ---
 

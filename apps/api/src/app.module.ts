@@ -11,6 +11,7 @@ import { ProcurementModule } from './modules/procurement/procurement.module';
 import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { ContractModule } from './modules/contract/contract.module';
 import { FinanceModule } from './modules/finance/finance.module';
+import { DocumentModule } from './modules/document/document.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -27,6 +28,7 @@ import { HealthController } from './health.controller';
     WarehouseModule,
     ContractModule,
     FinanceModule,
+    DocumentModule,
   ],
   controllers: [HealthController],
 })
