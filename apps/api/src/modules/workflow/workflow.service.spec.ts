@@ -57,12 +57,14 @@ describe('WorkflowService', () => {
       syncPaymentApproval: vi.fn(),
       syncReimbursementApproval: vi.fn(),
     };
+    const drawingService = { syncDrawingApproval: vi.fn() };
     service = new WorkflowService(
       workflowRepository as never,
       auditLogService as never,
       procurementService as never,
       contractService as never,
       financeService as never,
+      drawingService as never,
     );
   });
 

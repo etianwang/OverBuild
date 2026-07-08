@@ -32,6 +32,7 @@ import {
 import { ProcurementService } from '../procurement/procurement.service';
 import { ContractService } from '../contract/contract.service';
 import { FinanceService } from '../finance/finance.service';
+import { DrawingService } from '../drawing/drawing.service';
 
 @Injectable()
 export class WorkflowService {
@@ -44,6 +45,8 @@ export class WorkflowService {
     private readonly contractService: ContractService,
     @Inject(forwardRef(() => FinanceService))
     private readonly financeService: FinanceService,
+    @Inject(forwardRef(() => DrawingService))
+    private readonly drawingService: DrawingService,
   ) {}
 
   private isAdmin(user: AuthUser) {
@@ -483,6 +486,13 @@ export class WorkflowService {
           'approved',
         );
       }
+      if (instance.type === ApprovalType.drawing) {
+        await this.drawingService.syncDrawingApproval(
+          instance.businessId,
+          'approved',
+          approverId,
+        );
+      }
     } else {
       const nextNode = nodes[currentIndex + 1];
       updated = await this.workflowRepository.updateInstance(instance.id, {
@@ -554,6 +564,13 @@ export class WorkflowService {
       await this.financeService.syncReimbursementApproval(
         instance.businessId,
         'rejected',
+      );
+    }
+    if (instance.type === ApprovalType.drawing) {
+      await this.drawingService.syncDrawingApproval(
+        instance.businessId,
+        'rejected',
+        approverId,
       );
     }
 

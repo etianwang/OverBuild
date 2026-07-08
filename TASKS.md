@@ -232,12 +232,13 @@ npm run test:e2e    # E2E 通过
 
 ### 12. 图纸 (drawing)
 
-- [ ] 读文档：`docs/modules/drawing.md`
-- [ ] 数据库：`drawings`、`drawing_versions`、`drawing_reviews`
-- [ ] API：上传、版本、审阅、发布
-- [ ] 前端：图纸列表、预览、审阅
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/drawing.md`
+- [x] 数据库：`drawings`、`drawing_versions`、`drawing_reviews`
+- [x] API：上传、版本、审阅、发布
+- [x] 前端：图纸列表、预览、审阅
+- [x] 测试：drawing.service.spec.ts、drawing.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 13. 翻译 (translation)
 
@@ -320,9 +321,10 @@ graph TD
 | E | contract | ✅ 完成 |
 | E | finance | ✅ 完成 |
 | F | document | ✅ 完成 |
-| F–G | drawing → dashboard | 未开始 |
+| F | drawing | ✅ 完成 |
+| G | translation → dashboard | 未开始 |
 
-**下一步**：**模块 12 drawing（图纸）**
+**下一步**：**模块 13 translation（翻译）**
 
 ---
 

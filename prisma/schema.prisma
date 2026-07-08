@@ -230,6 +230,32 @@ enum TranslationTaskStatus {
   completed
 }
 
+enum DrawingDiscipline {
+  arch
+  struct
+  mep
+  civil
+  other
+}
+
+enum DrawingStatus {
+  draft
+  reviewing
+  approved
+  published
+}
+
+enum DrawingFileType {
+  dwg
+  pdf
+  image
+}
+
+enum DrawingReviewResult {
+  approved
+  rejected
+}
+
 model User {
   id           String     @id @default(uuid())
   username     String     @unique
@@ -257,6 +283,9 @@ model User {
   budgetRevisions      BudgetRevision[]   @relation("BudgetRevisor")
   createdDocuments     Document[]         @relation("DocumentCreator")
   uploadedDocVersions  DocumentVersion[]  @relation("DocumentUploader")
+  createdDrawings      Drawing[]          @relation("DrawingCreator")
+  uploadedDrawingVersions DrawingVersion[] @relation("DrawingUploader")
+  drawingReviews       DrawingReview[]    @relation("DrawingReviewer")
 
   @@map("users")
 }
@@ -393,6 +422,7 @@ model Project {
   invoices         Invoice[]
   documentCategories DocumentCategory[]
   documents        Document[]
+  drawings         Drawing[]
 
   @@index([status])
   @@index([managerId])
@@ -412,6 +442,7 @@ model ProjectZone {
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks   ProjectTask[]
   outbounds StockOutbound[]
+  drawings  Drawing[]
 
   @@index([projectId])
   @@map("project_zones")
@@ -1292,4 +1323,67 @@ model TranslationTask {
   @@index([sourceType, sourceId])
   @@index([status])
   @@map("translation_tasks")
+}
+
+model Drawing {
+  id             String            @id @default(uuid())
+  drawingNo      String            @unique @map("drawing_no")
+  name           String
+  nameFr         String?           @map("name_fr")
+  projectId      String            @map("project_id")
+  discipline     DrawingDiscipline
+  zoneId         String?           @map("zone_id")
+  currentVersion Int               @default(1) @map("current_version")
+  status         DrawingStatus     @default(draft)
+  searchText     String?           @map("search_text")
+  createdById    String            @map("created_by_id")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  deletedAt      DateTime?         @map("deleted_at")
+
+  project   Project            @relation(fields: [projectId], references: [id])
+  zone      ProjectZone?       @relation(fields: [zoneId], references: [id])
+  createdBy User               @relation("DrawingCreator", fields: [createdById], references: [id])
+  versions  DrawingVersion[]
+  reviews   DrawingReview[]
+
+  @@index([projectId])
+  @@index([discipline])
+  @@index([status])
+  @@map("drawings")
+}
+
+model DrawingVersion {
+  id           String          @id @default(uuid())
+  drawingId    String          @map("drawing_id")
+  version      Int
+  fileUrl      String          @map("file_url")
+  fileName     String          @map("file_name")
+  fileType     DrawingFileType @map("file_type")
+  fileSize     Int?            @map("file_size")
+  uploadedById String          @map("uploaded_by_id")
+  uploadedAt   DateTime        @default(now()) @map("uploaded_at")
+
+  drawing    Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  uploadedBy User    @relation("DrawingUploader", fields: [uploadedById], references: [id])
+
+  @@unique([drawingId, version])
+  @@index([drawingId])
+  @@map("drawing_versions")
+}
+
+model DrawingReview {
+  id         String              @id @default(uuid())
+  drawingId  String              @map("drawing_id")
+  version    Int
+  reviewerId String              @map("reviewer_id")
+  comment    String?
+  result     DrawingReviewResult
+  reviewedAt DateTime            @default(now()) @map("reviewed_at")
+
+  drawing  Drawing @relation(fields: [drawingId], references: [id], onDelete: Cascade)
+  reviewer User    @relation("DrawingReviewer", fields: [reviewerId], references: [id])
+
+  @@index([drawingId])
+  @@map("drawing_reviews")
 }

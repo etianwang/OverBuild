@@ -138,6 +138,18 @@ const PERMISSIONS = [
   { code: 'document.category.read', name: '查看文档分类', module: 'document' },
   { code: 'document.category.create', name: '新增文档分类', module: 'document' },
   { code: 'document.category.update', name: '编辑文档分类', module: 'document' },
+  { code: 'drawing.read', name: '查看图纸', module: 'drawing' },
+  { code: 'drawing.create', name: '上传图纸', module: 'drawing' },
+  { code: 'drawing.update', name: '编辑图纸', module: 'drawing' },
+  { code: 'drawing.delete', name: '删除图纸', module: 'drawing' },
+  { code: 'drawing.version.read', name: '查看图纸版本', module: 'drawing' },
+  { code: 'drawing.version.create', name: '上传新版本', module: 'drawing' },
+  { code: 'drawing.preview', name: '预览图纸', module: 'drawing' },
+  { code: 'drawing.download', name: '下载图纸', module: 'drawing' },
+  { code: 'drawing.submit_review', name: '提交图纸审阅', module: 'drawing' },
+  { code: 'drawing.review', name: '审阅图纸', module: 'drawing' },
+  { code: 'drawing.publish', name: '发布图纸', module: 'drawing' },
+  { code: 'drawing.export', name: '导出图纸', module: 'drawing' },
 ];
 
 async function main() {
@@ -453,6 +465,50 @@ async function main() {
   await grantPerms(engineerRole.id, engineerDocument);
   await grantPerms(translatorRole.id, translatorDocument);
   await grantPerms(bossRole.id, documentReadExport);
+
+  const drawingPerms = await prisma.permission.findMany({
+    where: { module: 'drawing' },
+  });
+  const drawingReadExport = drawingPerms.filter((p) =>
+    [
+      'drawing.read',
+      'drawing.preview',
+      'drawing.download',
+      'drawing.export',
+    ].includes(p.code),
+  );
+  const engineerDrawing = drawingPerms.filter((p) =>
+    [
+      'drawing.read',
+      'drawing.create',
+      'drawing.update',
+      'drawing.version.read',
+      'drawing.version.create',
+      'drawing.preview',
+      'drawing.download',
+      'drawing.submit_review',
+      'drawing.export',
+    ].includes(p.code),
+  );
+  const pmDrawing = drawingPerms.filter((p) =>
+    [
+      'drawing.read',
+      'drawing.create',
+      'drawing.update',
+      'drawing.delete',
+      'drawing.version.read',
+      'drawing.version.create',
+      'drawing.preview',
+      'drawing.download',
+      'drawing.review',
+      'drawing.publish',
+      'drawing.export',
+    ].includes(p.code),
+  );
+
+  await grantPerms(engineerRole.id, engineerDrawing);
+  await grantPerms(pmRole.id, pmDrawing);
+  await grantPerms(bossRole.id, drawingReadExport);
 
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
@@ -1152,6 +1208,57 @@ async function main() {
           version: 1,
           fileUrl: demoFileUrl,
           fileName: demoFileName,
+          fileType: 'pdf',
+          fileSize: 48,
+          uploadedById: pmUser.id,
+        },
+      },
+    },
+  });
+
+  const demoDrawingId = '00000000-0000-4000-8000-000000000r01';
+  const demoDrawingFile = 'demo-floor.pdf';
+  const demoDrawingUrl = `drawings/${demoDrawingId}/1/${demoDrawingFile}`;
+  const demoDrawingDir = join(
+    process.cwd(),
+    'uploads',
+    'drawings',
+    demoDrawingId,
+    '1',
+  );
+  mkdirSync(demoDrawingDir, { recursive: true });
+  writeFileSync(
+    join(demoDrawingDir, demoDrawingFile),
+    '%PDF-1.4\n%Demo OverBuild drawing\n',
+  );
+
+  await prisma.drawing.upsert({
+    where: { drawingNo: 'A-DEMO-001' },
+    update: {
+      name: '杜阿拉综合楼平面图',
+      nameFr: 'Plan RDC Douala',
+      projectId: demoProject.id,
+      discipline: 'arch',
+      status: 'published',
+      searchText: 'a-demo-001 杜阿拉综合楼平面图 plan rdc douala arch',
+      currentVersion: 1,
+    },
+    create: {
+      id: demoDrawingId,
+      drawingNo: 'A-DEMO-001',
+      name: '杜阿拉综合楼平面图',
+      nameFr: 'Plan RDC Douala',
+      projectId: demoProject.id,
+      discipline: 'arch',
+      status: 'published',
+      searchText: 'a-demo-001 杜阿拉综合楼平面图 plan rdc douala arch',
+      currentVersion: 1,
+      createdById: pmUser.id,
+      versions: {
+        create: {
+          version: 1,
+          fileUrl: demoDrawingUrl,
+          fileName: demoDrawingFile,
           fileType: 'pdf',
           fileSize: 48,
           uploadedById: pmUser.id,

@@ -12,6 +12,7 @@ import { WarehouseModule } from './modules/warehouse/warehouse.module';
 import { ContractModule } from './modules/contract/contract.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { DocumentModule } from './modules/document/document.module';
+import { DrawingModule } from './modules/drawing/drawing.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -29,6 +30,7 @@ import { HealthController } from './health.controller';
     ContractModule,
     FinanceModule,
     DocumentModule,
+    DrawingModule,
   ],
   controllers: [HealthController],
 })

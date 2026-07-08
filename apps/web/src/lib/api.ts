@@ -1824,3 +1824,135 @@ export async function submitDocumentTranslate(
     },
   );
 }
+
+// ── Drawing ──
+
+export const DRAWING_DISCIPLINE_LABEL: Record<string, string> = {
+  arch: '建筑',
+  struct: '结构',
+  mep: '机电',
+  civil: '土建',
+  other: '其他',
+};
+
+export const DRAWING_STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  reviewing: '审阅中',
+  approved: '已批准',
+  published: '已发布',
+};
+
+export interface DrawingVersionItem {
+  id: string;
+  version: number;
+  fileName: string;
+  fileType: string;
+  fileSize?: number | null;
+  uploadedAt: string;
+  uploadedBy?: { id: string; name: string };
+}
+
+export interface DrawingItem {
+  id: string;
+  drawingNo: string;
+  name: string;
+  nameFr?: string | null;
+  projectId: string;
+  discipline: string;
+  zoneId?: string | null;
+  currentVersion: number;
+  status: string;
+  project?: { id: string; code: string; name: string };
+  zone?: { id: string; name: string; nameFr?: string | null } | null;
+  createdBy?: { id: string; name: string };
+  versions?: DrawingVersionItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listDrawings(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  projectId?: string;
+  discipline?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.discipline) search.set('discipline', params.discipline);
+  return apiFetch<Paginated<DrawingItem>>(`/drawings?${search}`);
+}
+
+export async function createDrawing(
+  data: {
+    drawingNo: string;
+    name: string;
+    nameFr?: string;
+    projectId: string;
+    discipline: string;
+    zoneId?: string;
+  },
+  file: File,
+) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const form = new FormData();
+  form.append('file', file);
+  form.append('drawingNo', data.drawingNo);
+  form.append('name', data.name);
+  if (data.nameFr) form.append('nameFr', data.nameFr);
+  form.append('projectId', data.projectId);
+  form.append('discipline', data.discipline);
+  if (data.zoneId) form.append('zoneId', data.zoneId);
+
+  const res = await fetch(`${API_URL}/drawings`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message ?? '上传失败');
+  }
+  return json as { success: boolean; data: DrawingItem };
+}
+
+export function getDrawingPreviewUrl(id: string, version: number) {
+  return `${API_URL}/drawings/${id}/versions/${version}/preview`;
+}
+
+export async function openDrawingPreview(id: string, version: number) {
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const res = await fetch(getDrawingPreviewUrl(id, version), {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error('预览失败');
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+}
+
+export async function submitDrawingReview(id: string) {
+  return apiFetch<DrawingItem>(`/drawings/${id}/submit-review`, {
+    method: 'POST',
+  });
+}
+
+export async function reviewDrawing(
+  id: string,
+  data: { result: 'approved' | 'rejected'; comment?: string },
+) {
+  return apiFetch<DrawingItem>(`/drawings/${id}/review`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function publishDrawing(id: string) {
+  return apiFetch<DrawingItem>(`/drawings/${id}/publish`, { method: 'POST' });
+}
