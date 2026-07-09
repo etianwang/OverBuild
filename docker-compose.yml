@@ -1,3 +1,9 @@
+# OverBuild — 单一 Compose 配置
+# 开发：docker compose up -d --build
+# 生产（宝塔）：docker compose up -d --build  + 宝塔 Nginx 反代（见 README）
+# 生产（无宝塔备选）：docker compose --profile prod up -d --build
+# 数据目录：.env 中设置 DATA_DIR（默认 ./data）
+
 services:
   db:
     image: postgres:16-alpine
@@ -10,7 +16,7 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U overbuild -d overbuild"]
       interval: 5s
@@ -24,7 +30,7 @@ services:
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - redisdata:/data
+      - ${DATA_DIR:-./data}/redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -50,10 +56,13 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh-in-production}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
       DEEPL_AUTH_KEY: ${DEEPL_AUTH_KEY:-}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       API_PORT: 3001
       API_URL: http://api:3001
     ports:
       - "${API_PORT:-3001}:3001"
+    volumes:
+      - ${DATA_DIR:-./data}/uploads:/app/apps/api/uploads
     healthcheck:
       test:
         [
@@ -83,6 +92,16 @@ services:
     ports:
       - "${WEB_PORT:-3000}:3000"
 
-volumes:
-  pgdata:
-  redisdata:
+  nginx:
+    profiles: [prod]
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    ports:
+      - "${HTTP_PORT:-80}:80"
+    volumes:
+      - ./deploy/nginx/overbuild-docker.conf:/etc/nginx/conf.d/default.conf:ro

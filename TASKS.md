@@ -329,12 +329,12 @@ graph TD
 | H | notification | ✅ 完成 |
 | I | dashboard | ✅ 完成 |
 
-**下一步**：**后期容器化与部署**（见下方「后期：容器化与部署」）
+**下一步**：全部模块与部署配置已完成，可按需上线与运维。
 
 ---
 
 ## 后期：容器化与部署（功能完成后）
 
-- [ ] Docker Compose 编排（api + web + db + redis）
-- [ ] GitHub Actions CI 流水线
-- [ ] Ubuntu + Nginx 生产部署
+- [x] Docker Compose 编排（api + web + db + redis）
+- [x] GitHub Actions CI 流水线
+- [x] Ubuntu + 宝塔面板生产部署

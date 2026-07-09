@@ -83,8 +83,9 @@
 | 技术 | 用途 |
 |------|------|
 | **Ubuntu** | 生产服务器操作系统 |
-| **Docker Compose** | 多容器编排（API、Web、PostgreSQL、Redis、Nginx） |
-| **Nginx** | 反向代理、SSL 终止、静态资源 |
+| **宝塔面板** | 默认生产环境：Nginx 反代、SSL、防火墙 |
+| **Docker Compose** | 多容器编排（API、Web、PostgreSQL、Redis） |
+| **Nginx** | 由宝塔管理；Compose `--profile prod` 仅作无宝塔备选 |
 
 ### 服务编排
 
@@ -103,6 +104,16 @@ services:
 docker compose up -d --build
 # Web: http://localhost:3000  API: http://localhost:3001/api/v1/health
 ```
+
+生产（Ubuntu + 宝塔 + Docker）：
+
+```bash
+cp .env.docker.example .env   # 编辑 JWT、CORS_ORIGIN、DATA_DIR
+bash scripts/deploy-prod.sh   # docker compose up -d --build
+# 宝塔站点配置反代：deploy/baota/nginx-site.conf
+```
+
+无宝塔备选：`docker compose --profile prod up -d --build`
 
 ---
 

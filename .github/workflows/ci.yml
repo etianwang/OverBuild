@@ -34,6 +34,16 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
     env:
       DATABASE_URL: postgresql://overbuild:overbuild@localhost:5432/overbuild?schema=public&client_encoding=UTF8
       JWT_SECRET: ci-test-secret
@@ -96,7 +106,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Validate Compose file
-        run: docker compose config
+        run: |
+          docker compose config
+          docker compose --profile prod config
 
       - name: Build API image
         uses: docker/build-push-action@v6

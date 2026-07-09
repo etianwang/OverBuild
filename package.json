@@ -25,6 +25,9 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
     "docker:build": "docker compose build",
+    "docker:full": "bash scripts/docker-up.sh",
+    "docker:prod": "docker compose --profile prod up -d --build",
+    "docker:prod:down": "docker compose --profile prod down",
     "test:local": "powershell -ExecutionPolicy Bypass -File scripts/test-local.ps1",
     "test:deepl": "node scripts/test-deepl.mjs",
     "docker:init": "npm run docker:up && npm run db:setup"

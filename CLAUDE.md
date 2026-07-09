@@ -12,7 +12,7 @@ OverBuild 是国内公司海外驻外工程项目的综合内部管理平台。
 
 - 后端：NestJS + Prisma + PostgreSQL + Redis + BullMQ + JWT
 - 前端：Next.js + React + TypeScript + TailwindCSS + Shadcn UI + React Query + Zustand
-- 部署：Ubuntu + Docker Compose + Nginx
+- 部署：Ubuntu + 宝塔面板 + Docker Compose
 - CI：GitHub Actions
 - 测试：Vitest + Playwright
 

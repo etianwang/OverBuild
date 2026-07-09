@@ -37,6 +37,7 @@ if (-not (Test-DockerAvailable)) {
 docker compose version | Out-Host
 Write-Step '3/3 Docker Compose build and smoke test'
 docker compose config | Out-Null
+docker compose --profile prod config | Out-Null
 Write-Host 'PASS: compose config' -ForegroundColor Green
 
 docker compose build

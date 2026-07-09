@@ -10,7 +10,7 @@
 |----|------|
 | 后端 | NestJS、Prisma、PostgreSQL、Redis、BullMQ、Swagger、JWT |
 | 前端 | Next.js、React、TypeScript、TailwindCSS、Shadcn UI、React Query、Zustand |
-| 部署 | Ubuntu、Docker Compose、Nginx |
+| 部署 | Ubuntu、宝塔面板、Docker Compose |
 | CI/CD | GitHub Actions |
 | 测试 | Vitest、Playwright |
 
