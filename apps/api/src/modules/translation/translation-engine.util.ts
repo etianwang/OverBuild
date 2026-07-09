@@ -94,3 +94,81 @@ export function pickPreferredVersion<
   if (manual) return manual;
   return versions.find((v) => v.source === 'auto') ?? null;
 }
+
+export type GlossaryPlaceholder = {
+  tag: string;
+  value: string;
+};
+
+export function protectGlossaryForDeepL(
+  text: string,
+  terms: GlossaryEntry[],
+  targetLang: Locale,
+): { protectedText: string; placeholders: GlossaryPlaceholder[] } {
+  let result = text;
+  const placeholders: GlossaryPlaceholder[] = [];
+  const sorted = [...terms].sort((a, b) => b.source.length - a.source.length);
+
+  sorted.forEach((term, index) => {
+    if (!result.includes(term.source)) return;
+
+    const value =
+      targetLang === Locale.zh
+        ? term.zh
+        : targetLang === Locale.fr
+          ? term.fr
+          : term.en;
+    if (!value) return;
+
+    const tag = `ob-glossary-${index}`;
+    const marker = `<x id="${tag}"/>`;
+    placeholders.push({ tag, value });
+    result = result.split(term.source).join(marker);
+  });
+
+  return { protectedText: result, placeholders };
+}
+
+export function restoreGlossaryPlaceholders(
+  text: string,
+  placeholders: GlossaryPlaceholder[],
+) {
+  let result = text;
+  for (const { tag, value } of placeholders) {
+    result = result.replace(new RegExp(`<x id="${tag}"\\s*/>`, 'g'), value);
+    result = result.replace(new RegExp(`<x id="${tag}">\\s*</x>`, 'g'), value);
+  }
+  return result;
+}
+
+export async function translateContentWithDeepL(
+  content: Record<string, string>,
+  sourceLang: Locale,
+  targetLang: Locale,
+  terms: GlossaryEntry[],
+  translate: (text: string) => Promise<string>,
+): Promise<Record<string, string>> {
+  const result: Record<string, string> = {};
+
+  for (const [key, value] of Object.entries(content)) {
+    if (!value?.trim()) {
+      result[key] = value;
+      continue;
+    }
+
+    if (sourceLang === targetLang) {
+      result[key] = applyGlossary(value, terms, targetLang);
+      continue;
+    }
+
+    const { protectedText, placeholders } = protectGlossaryForDeepL(
+      value,
+      terms,
+      targetLang,
+    );
+    const translated = await translate(protectedText);
+    result[key] = restoreGlossaryPlaceholders(translated, placeholders);
+  }
+
+  return result;
+}

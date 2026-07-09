@@ -1,4 +1,4 @@
-import { PrismaClient, Locale, UserStatus, ProjectStatus, MaterialDiscipline } from '@prisma/client';
+import { PrismaClient, Locale, UserStatus, ProjectStatus, MaterialDiscipline, NotificationType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
@@ -1384,6 +1384,53 @@ async function main() {
       searchText: 'tr-demo-001 document 杜阿拉综合楼施工方案 zh fr',
     },
   });
+
+  await prisma.notification.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000n01' },
+    update: {
+      userId: pmUser.id,
+      type: NotificationType.approval,
+      title: '待办审批',
+      content: '工程师提交了采购申请审批（PR-DEMO-001）',
+      link: '/approvals',
+      isRead: false,
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000n01',
+      userId: pmUser.id,
+      type: NotificationType.approval,
+      title: '待办审批',
+      content: '工程师提交了采购申请审批（PR-DEMO-001）',
+      link: '/approvals',
+      isRead: false,
+    },
+  });
+
+  const warehouseUser = await prisma.user.findUnique({
+    where: { username: 'warehouse' },
+  });
+  if (warehouseUser) {
+    await prisma.notification.upsert({
+      where: { id: '00000000-0000-4000-8000-000000000n02' },
+      update: {
+        userId: warehouseUser.id,
+        type: NotificationType.inventory,
+        title: '库存预警',
+        content: '示例材料库存低于最低库存，请及时补货',
+        link: '/materials',
+        isRead: false,
+      },
+      create: {
+        id: '00000000-0000-4000-8000-000000000n02',
+        userId: warehouseUser.id,
+        type: NotificationType.inventory,
+        title: '库存预警',
+        content: '示例材料库存低于最低库存，请及时补货',
+        link: '/materials',
+        isRead: false,
+      },
+    });
+  }
 
   const fixStats = await fixTextContent(prisma);
   const fixedCount = fixStats.reduce((sum, item) => sum + item.fixed, 0);

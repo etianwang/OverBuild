@@ -12,6 +12,7 @@ describe('TranslationService', () => {
   };
 
   const auditLogService = { create: vi.fn() };
+  const deepLClient = { isConfigured: false, translateText: vi.fn() };
 
   let service: TranslationService;
 
@@ -35,6 +36,7 @@ describe('TranslationService', () => {
     service = new TranslationService(
       translationRepository as never,
       auditLogService as never,
+      deepLClient as never,
     );
   });
 

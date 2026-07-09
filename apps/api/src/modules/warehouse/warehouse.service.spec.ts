@@ -16,6 +16,7 @@ describe('WarehouseService', () => {
   };
 
   const auditLogService = { create: vi.fn() };
+  const notificationService = { maybeNotifyLowStock: vi.fn() };
 
   let service: WarehouseService;
 
@@ -37,6 +38,7 @@ describe('WarehouseService', () => {
     service = new WarehouseService(
       warehouseRepository as never,
       auditLogService as never,
+      notificationService as never,
     );
   });
 

@@ -16,6 +16,7 @@ import {
 } from '@prisma/client';
 import { AuditLogService } from '../audit-log/audit-log.service';
 import { AuthUser } from '../auth/auth.types';
+import { NotificationService } from '../notification/notification.service';
 import { toCsv } from '../project/csv.util';
 import {
   ApprovalActionDto,
@@ -39,6 +40,7 @@ export class WorkflowService {
   constructor(
     private readonly workflowRepository: WorkflowRepository,
     private readonly auditLogService: AuditLogService,
+    private readonly notificationService: NotificationService,
     @Inject(forwardRef(() => ProcurementService))
     private readonly procurementService: ProcurementService,
     @Inject(forwardRef(() => ContractService))
@@ -159,7 +161,7 @@ export class WorkflowService {
     initiatorName: string,
   ) {
     const typeLabel = APPROVAL_TYPE_LABEL[instance.type] ?? instance.type;
-    await this.workflowRepository.createNotification({
+    await this.notificationService.send({
       userId: approverId,
       type: NotificationType.approval,
       title: '待办审批',
@@ -184,7 +186,7 @@ export class WorkflowService {
         : instance.status === ApprovalStatus.rejected
           ? '已驳回'
           : '已撤回';
-    await this.workflowRepository.createNotification({
+    await this.notificationService.send({
       userId: initiatorId,
       type: NotificationType.approval,
       title: '审批结果',

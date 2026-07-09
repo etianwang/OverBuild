@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, StockDocumentStatus } from '@prisma/client';
 import { AuditLogService } from '../audit-log/audit-log.service';
+import { NotificationService } from '../notification/notification.service';
 import { AuthUser } from '../auth/auth.types';
 import { toCsv } from '../project/csv.util';
 import {
@@ -25,6 +26,7 @@ export class WarehouseService {
   constructor(
     private readonly warehouseRepository: WarehouseRepository,
     private readonly auditLogService: AuditLogService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private isAdmin(user: AuthUser) {
@@ -454,6 +456,9 @@ export class WarehouseService {
         resourceId: id,
         payload: { action: 'confirm' },
       });
+      for (const item of outbound.items) {
+        await this.notificationService.maybeNotifyLowStock(item.materialId);
+      }
       return this.mapInbound(updated as never);
     } catch (err) {
       if (

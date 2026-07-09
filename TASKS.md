@@ -252,12 +252,13 @@ npm run test:e2e    # E2E 通过
 
 ### 14. 通知 (notification)
 
-- [ ] 读文档：`docs/modules/notification.md`
-- [ ] 数据库：`notifications`
-- [ ] API：通知列表、未读数、标记已读（BullMQ 推送）
-- [ ] 前端：通知铃铛、通知列表
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/notification.md`
+- [x] 数据库：`notifications`
+- [x] API：通知列表、未读数、标记已读
+- [x] 前端：通知铃铛、通知列表
+- [x] 测试：notification.service.spec.ts、notification.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 15. Dashboard (dashboard)
 
@@ -324,9 +325,10 @@ graph TD
 | F | document | ✅ 完成 |
 | F | drawing | ✅ 完成 |
 | G | translation | ✅ 完成 |
-| H | notification → dashboard | 未开始 |
+| H | notification | ✅ 完成 |
+| I | dashboard | 未开始 |
 
-**下一步**：**模块 14 notification（通知）**
+**下一步**：**模块 15 dashboard（仪表盘）**
 
 ---
 

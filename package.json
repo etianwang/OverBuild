@@ -26,6 +26,7 @@
     "docker:logs": "docker compose logs -f",
     "docker:build": "docker compose build",
     "test:local": "powershell -ExecutionPolicy Bypass -File scripts/test-local.ps1",
+    "test:deepl": "node scripts/test-deepl.mjs",
     "docker:init": "npm run docker:up && npm run db:setup"
   },
   "devDependencies": {

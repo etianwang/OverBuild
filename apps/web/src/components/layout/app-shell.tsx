@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Moon, Search, Sun } from 'lucide-react';
+import { Bell, Moon, Search, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
-import { logout } from '@/lib/api';
+import { getNotificationUnreadCount, logout } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/primitives';
@@ -32,6 +33,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    getNotificationUnreadCount()
+      .then((res) => setUnreadCount(res.data.count))
+      .catch(() => setUnreadCount(0));
+  }, [user, pathname]);
 
   const visibleNav = NAV.filter(
     (item) =>
@@ -62,6 +71,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Link
+              href="/notifications"
+              className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+              aria-label="通知"
+            >
+              <Bell className="h-4 w-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium text-primary-foreground">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </Link>
             <Button
               variant="ghost"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

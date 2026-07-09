@@ -28,7 +28,9 @@ import {
   buildTaskSearchText,
   mockTranslateContent,
   pickPreferredVersion,
+  translateContentWithDeepL,
 } from './translation-engine.util';
+import { DeepLClient } from './deepl.client';
 import { TranslationRepository } from './translation.repository';
 
 const ENTITY_TYPES = new Set([
@@ -51,6 +53,7 @@ export class TranslationService {
   constructor(
     private readonly translationRepository: TranslationRepository,
     private readonly auditLogService: AuditLogService,
+    private readonly deepLClient: DeepLClient,
   ) {}
 
   private isAdmin(user: AuthUser) {
@@ -326,12 +329,43 @@ export class TranslationService {
       task.sourceId,
     );
     const glossary = await this.translationRepository.listAllGlossary();
-    const translated = mockTranslateContent(
-      sourceContent,
-      task.sourceLang,
-      task.targetLang,
-      glossary,
-    );
+    let translated: Record<string, string>;
+
+    try {
+      if (this.deepLClient.isConfigured) {
+        translated = await translateContentWithDeepL(
+          sourceContent,
+          task.sourceLang,
+          task.targetLang,
+          glossary,
+          (text) =>
+            this.deepLClient.translateText(
+              text,
+              task.sourceLang,
+              task.targetLang,
+            ),
+        );
+      } else {
+        translated = mockTranslateContent(
+          sourceContent,
+          task.sourceLang,
+          task.targetLang,
+          glossary,
+        );
+      }
+    } catch (error) {
+      await this.auditLogService.create({
+        action: 'update',
+        module: 'translation',
+        resource: 'translation_task',
+        resourceId: taskId,
+        payload: {
+          action: 'auto_translate_failed',
+          message: error instanceof Error ? error.message : 'DeepL failed',
+        },
+      });
+      return;
+    }
 
     await this.translationRepository.upsertVersion({
       taskId,

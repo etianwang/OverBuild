@@ -2084,3 +2084,56 @@ export async function deleteGlossaryTerm(id: string) {
     method: 'DELETE',
   });
 }
+
+// ── Notification ──
+
+export interface NotificationItem {
+  id: string;
+  type: string;
+  typeLabel: string;
+  title: string;
+  content: string;
+  link?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export async function listNotifications(params?: {
+  page?: number;
+  pageSize?: number;
+  type?: string;
+  isRead?: boolean;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.type) search.set('type', params.type);
+  if (params?.isRead !== undefined) {
+    search.set('isRead', String(params.isRead));
+  }
+  return apiFetch<Paginated<NotificationItem>>(`/notifications?${search}`);
+}
+
+export async function getNotificationUnreadCount() {
+  return apiFetch<{ count: number }>('/notifications/unread-count');
+}
+
+export async function markNotificationRead(id: string) {
+  return apiFetch<{ id: string; isRead: boolean }>(
+    `/notifications/${id}/read`,
+    { method: 'PUT' },
+  );
+}
+
+export async function markAllNotificationsRead() {
+  return apiFetch<{ updated: number }>('/notifications/read-all', {
+    method: 'PUT',
+  });
+}
+
+export async function deleteNotification(id: string) {
+  return apiFetch<{ id: string }>(`/notifications/${id}`, {
+    method: 'DELETE',
+  });
+}

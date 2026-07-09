@@ -4,6 +4,8 @@ import {
   applyGlossary,
   mockTranslateField,
   pickPreferredVersion,
+  protectGlossaryForDeepL,
+  restoreGlossaryPlaceholders,
 } from './translation-engine.util';
 
 describe('translation-engine.util', () => {
@@ -33,5 +35,19 @@ describe('translation-engine.util', () => {
       { source: 'manual', content: { title: 'manual' } },
     ]);
     expect(preferred?.source).toBe('manual');
+  });
+
+  it('protects glossary terms with xml placeholders for DeepL', () => {
+    const { protectedText, placeholders } = protectGlossaryForDeepL(
+      '杜阿拉综合楼施工',
+      terms,
+      Locale.fr,
+    );
+    expect(protectedText).toContain('<x id="ob-glossary-0"/>');
+    expect(placeholders.length).toBeGreaterThan(0);
+
+    const restored = restoreGlossaryPlaceholders(protectedText, placeholders);
+    expect(restored).toContain('Immeuble');
+    expect(restored).toContain('Construction');
   });
 });
