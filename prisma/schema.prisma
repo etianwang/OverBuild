@@ -230,6 +230,11 @@ enum TranslationTaskStatus {
   completed
 }
 
+enum TranslationVersionSource {
+  auto
+  manual
+}
+
 enum DrawingDiscipline {
   arch
   struct
@@ -286,6 +291,9 @@ model User {
   createdDrawings      Drawing[]          @relation("DrawingCreator")
   uploadedDrawingVersions DrawingVersion[] @relation("DrawingUploader")
   drawingReviews       DrawingReview[]    @relation("DrawingReviewer")
+  assignedTranslations TranslationTask[]  @relation("TranslationAssignee")
+  createdTranslations  TranslationTask[]  @relation("TranslationCreator")
+  translationVersions  TranslationVersion[] @relation("TranslationTranslator")
 
   @@map("users")
 }
@@ -1317,12 +1325,62 @@ model TranslationTask {
   targetLang Locale                @map("target_lang")
   status     TranslationTaskStatus @default(pending)
   assigneeId String?               @map("assignee_id")
+  searchText String?               @map("search_text")
+  createdById String?              @map("created_by_id")
   createdAt  DateTime              @default(now()) @map("created_at")
   updatedAt  DateTime              @updatedAt @map("updated_at")
+
+  assignee  User?                @relation("TranslationAssignee", fields: [assigneeId], references: [id])
+  createdBy User?                @relation("TranslationCreator", fields: [createdById], references: [id])
+  versions  TranslationVersion[]
 
   @@index([sourceType, sourceId])
   @@index([status])
   @@map("translation_tasks")
+}
+
+model TranslationVersion {
+  id             String                   @id @default(uuid())
+  taskId         String                   @map("task_id")
+  source         TranslationVersionSource
+  content        Json
+  translatedById String?                  @map("translated_by_id")
+  createdAt      DateTime                 @default(now()) @map("created_at")
+
+  task         TranslationTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  translatedBy User?           @relation("TranslationTranslator", fields: [translatedById], references: [id])
+
+  @@unique([taskId, source])
+  @@index([taskId])
+  @@map("translation_versions")
+}
+
+model GlossaryTerm {
+  id         String   @id @default(uuid())
+  source     String
+  zh         String?
+  fr         String?
+  en         String?
+  category   String?
+  searchText String?  @map("search_text")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([source])
+  @@map("glossary_terms")
+}
+
+model EntityTranslation {
+  id         String @id @default(uuid())
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id")
+  locale     Locale
+  field      String
+  value      String
+
+  @@unique([entityType, entityId, locale, field])
+  @@index([entityType, entityId])
+  @@map("entity_translations")
 }
 
 model Drawing {

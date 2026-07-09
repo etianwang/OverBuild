@@ -13,6 +13,7 @@ import { ContractModule } from './modules/contract/contract.module';
 import { FinanceModule } from './modules/finance/finance.module';
 import { DocumentModule } from './modules/document/document.module';
 import { DrawingModule } from './modules/drawing/drawing.module';
+import { TranslationModule } from './modules/translation/translation.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -31,6 +32,7 @@ import { HealthController } from './health.controller';
     FinanceModule,
     DocumentModule,
     DrawingModule,
+    TranslationModule,
   ],
   controllers: [HealthController],
 })

@@ -150,6 +150,16 @@ const PERMISSIONS = [
   { code: 'drawing.review', name: '审阅图纸', module: 'drawing' },
   { code: 'drawing.publish', name: '发布图纸', module: 'drawing' },
   { code: 'drawing.export', name: '导出图纸', module: 'drawing' },
+  { code: 'translation.task.read', name: '查看翻译任务', module: 'translation' },
+  { code: 'translation.task.create', name: '创建翻译任务', module: 'translation' },
+  { code: 'translation.task.assign', name: '分配译员', module: 'translation' },
+  { code: 'translation.auto', name: '自动翻译', module: 'translation' },
+  { code: 'translation.manual', name: '人工翻译', module: 'translation' },
+  { code: 'translation.export', name: '导出翻译', module: 'translation' },
+  { code: 'translation.glossary.read', name: '查看术语库', module: 'translation' },
+  { code: 'translation.glossary.manage', name: '管理术语库', module: 'translation' },
+  { code: 'translation.entity.read', name: '查看实体译文', module: 'translation' },
+  { code: 'translation.entity.update', name: '更新实体译文', module: 'translation' },
 ];
 
 async function main() {
@@ -510,6 +520,41 @@ async function main() {
   await grantPerms(pmRole.id, pmDrawing);
   await grantPerms(bossRole.id, drawingReadExport);
 
+  const translationPerms = await prisma.permission.findMany({
+    where: { module: 'translation' },
+  });
+  const translationReadExport = translationPerms.filter((p) =>
+    [
+      'translation.task.read',
+      'translation.glossary.read',
+      'translation.entity.read',
+      'translation.export',
+    ].includes(p.code),
+  );
+  const pmTranslation = translationPerms.filter((p) =>
+    [
+      'translation.task.read',
+      'translation.task.create',
+      'translation.task.assign',
+      'translation.glossary.read',
+      'translation.entity.read',
+      'translation.export',
+    ].includes(p.code),
+  );
+  const engineerTranslation = translationPerms.filter((p) =>
+    [
+      'translation.task.read',
+      'translation.glossary.read',
+      'translation.entity.read',
+    ].includes(p.code),
+  );
+  const translatorTranslation = translationPerms;
+
+  await grantPerms(translatorRole.id, translatorTranslation);
+  await grantPerms(pmRole.id, pmTranslation);
+  await grantPerms(engineerRole.id, engineerTranslation);
+  await grantPerms(bossRole.id, translationReadExport);
+
   const passwordHashDemo = await bcrypt.hash('demo123', 10);
   const demoUsers = [
     { username: 'pm', name: '项目经理张三', role: pmRole },
@@ -517,6 +562,7 @@ async function main() {
     { username: 'boss', name: '老板王五', role: bossRole },
     { username: 'procurement', name: '采购赵六', role: procurementRole },
     { username: 'warehouse', name: '仓管钱七', role: warehouseRole },
+    { username: 'translator', name: '译员孙八', role: translatorRole },
   ];
 
   for (const demo of demoUsers) {
@@ -1267,6 +1313,78 @@ async function main() {
     },
   });
 
+  const translatorUser = await prisma.user.findUniqueOrThrow({
+    where: { username: 'translator' },
+  });
+
+  await prisma.glossaryTerm.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000g01' },
+    update: {
+      source: '综合楼',
+      zh: '综合楼',
+      fr: 'Immeuble',
+      en: 'Building',
+      category: '建筑',
+      searchText: '综合楼 immeuble building 建筑',
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000g01',
+      source: '综合楼',
+      zh: '综合楼',
+      fr: 'Immeuble',
+      en: 'Building',
+      category: '建筑',
+      searchText: '综合楼 immeuble building 建筑',
+    },
+  });
+
+  await prisma.glossaryTerm.upsert({
+    where: { id: '00000000-0000-4000-8000-000000000g02' },
+    update: {
+      source: '施工',
+      zh: '施工',
+      fr: 'Construction',
+      en: 'Construction',
+      category: '工程',
+      searchText: '施工 construction 工程',
+    },
+    create: {
+      id: '00000000-0000-4000-8000-000000000g02',
+      source: '施工',
+      zh: '施工',
+      fr: 'Construction',
+      en: 'Construction',
+      category: '工程',
+      searchText: '施工 construction 工程',
+    },
+  });
+
+  const demoTranslationTaskId = '00000000-0000-4000-8000-000000000t01';
+  await prisma.translationTask.upsert({
+    where: { code: 'TR-DEMO-001' },
+    update: {
+      sourceType: 'document',
+      sourceId: demoDocId,
+      sourceLang: Locale.zh,
+      targetLang: Locale.fr,
+      status: 'pending',
+      assigneeId: translatorUser.id,
+      searchText: 'tr-demo-001 document 杜阿拉综合楼施工方案 zh fr',
+    },
+    create: {
+      id: demoTranslationTaskId,
+      code: 'TR-DEMO-001',
+      sourceType: 'document',
+      sourceId: demoDocId,
+      sourceLang: Locale.zh,
+      targetLang: Locale.fr,
+      status: 'pending',
+      assigneeId: translatorUser.id,
+      createdById: pmUser.id,
+      searchText: 'tr-demo-001 document 杜阿拉综合楼施工方案 zh fr',
+    },
+  });
+
   const fixStats = await fixTextContent(prisma);
   const fixedCount = fixStats.reduce((sum, item) => sum + item.fixed, 0);
   if (fixedCount > 0) {
@@ -1274,7 +1392,7 @@ async function main() {
   }
 
   console.log(
-    'Seed completed. Default admin: admin / admin123; demo users: pm/finance/boss / demo123',
+    'Seed completed. Default admin: admin / admin123; demo users: pm/finance/boss/translator / demo123',
   );
 }
 

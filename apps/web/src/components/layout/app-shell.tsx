@@ -19,6 +19,7 @@ const NAV = [
   { href: '/finance', label: '财务', permission: 'finance.income.read' },
   { href: '/documents', label: '文档', permission: 'document.read' },
   { href: '/drawings', label: '图纸', permission: 'drawing.read' },
+  { href: '/translation', label: '翻译', permission: 'translation.task.read' },
   { href: '/approvals', label: '审批', permission: null },
   { href: '/users', label: '用户', permission: 'auth.user.read' },
   { href: '/audit-logs', label: '审计日志', permission: 'audit.read' },

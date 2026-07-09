@@ -242,12 +242,13 @@ npm run test:e2e    # E2E 通过
 
 ### 13. 翻译 (translation)
 
-- [ ] 读文档：`docs/modules/translation.md`
-- [ ] 数据库：`translation_tasks`、`translation_versions`、`glossary_terms`
-- [ ] API：翻译任务、自动翻译、术语库
-- [ ] 前端：翻译任务、术语管理
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/translation.md`
+- [x] 数据库：`translation_tasks`、`translation_versions`、`glossary_terms`
+- [x] API：翻译任务、自动翻译、术语库
+- [x] 前端：翻译任务、术语管理
+- [x] 测试：translation.service.spec.ts、translation.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ### 14. 通知 (notification)
 
@@ -322,9 +323,10 @@ graph TD
 | E | finance | ✅ 完成 |
 | F | document | ✅ 完成 |
 | F | drawing | ✅ 完成 |
-| G | translation → dashboard | 未开始 |
+| G | translation | ✅ 完成 |
+| H | notification → dashboard | 未开始 |
 
-**下一步**：**模块 13 translation（翻译）**
+**下一步**：**模块 14 notification（通知）**
 
 ---
 

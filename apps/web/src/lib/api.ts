@@ -1956,3 +1956,131 @@ export async function reviewDrawing(
 export async function publishDrawing(id: string) {
   return apiFetch<DrawingItem>(`/drawings/${id}/publish`, { method: 'POST' });
 }
+
+// ── Translation ──
+
+export const TRANSLATION_STATUS_LABEL: Record<string, string> = {
+  pending: '待处理',
+  auto: '自动译文',
+  manual: '人工译文',
+  completed: '已完成',
+};
+
+export interface TranslationVersionItem {
+  id: string;
+  source: 'auto' | 'manual';
+  content: Record<string, string>;
+  translatedBy?: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface TranslationTaskItem {
+  id: string;
+  code: string;
+  sourceType: string;
+  sourceId: string;
+  sourceLang: string;
+  targetLang: string;
+  status: string;
+  statusLabel: string;
+  assignee?: { id: string; name: string };
+  versions?: TranslationVersionItem[];
+  preferredContent?: Record<string, string> | null;
+  preferredSource?: 'auto' | 'manual' | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GlossaryTermItem {
+  id: string;
+  source: string;
+  zh?: string | null;
+  fr?: string | null;
+  en?: string | null;
+  category?: string | null;
+}
+
+export async function listTranslationTasks(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+  status?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 20),
+  });
+  if (params?.q) search.set('q', params.q);
+  if (params?.status) search.set('status', params.status);
+  return apiFetch<Paginated<TranslationTaskItem>>(
+    `/translation/tasks?${search}`,
+  );
+}
+
+export async function getTranslationTask(id: string) {
+  return apiFetch<TranslationTaskItem>(`/translation/tasks/${id}`);
+}
+
+export async function createTranslationTask(data: {
+  sourceType: string;
+  sourceId: string;
+  sourceLang: string;
+  targetLang: string;
+  assigneeId?: string;
+}) {
+  return apiFetch<TranslationTaskItem>('/translation/tasks', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function triggerAutoTranslate(id: string) {
+  return apiFetch<{ id: string; status: string; message: string }>(
+    `/translation/tasks/${id}/auto-translate`,
+    { method: 'POST' },
+  );
+}
+
+export async function submitManualTranslation(
+  id: string,
+  content: Record<string, string>,
+) {
+  return apiFetch<TranslationTaskItem>(`/translation/tasks/${id}/manual`, {
+    method: 'PUT',
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function listGlossaryTerms(params?: {
+  page?: number;
+  pageSize?: number;
+  q?: string;
+}) {
+  const search = new URLSearchParams({
+    page: String(params?.page ?? 1),
+    pageSize: String(params?.pageSize ?? 50),
+  });
+  if (params?.q) search.set('q', params.q);
+  return apiFetch<Paginated<GlossaryTermItem>>(
+    `/translation/glossary?${search}`,
+  );
+}
+
+export async function createGlossaryTerm(data: {
+  source: string;
+  zh?: string;
+  fr?: string;
+  en?: string;
+  category?: string;
+}) {
+  return apiFetch<GlossaryTermItem>('/translation/glossary', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteGlossaryTerm(id: string) {
+  return apiFetch<{ id: string }>(`/translation/glossary/${id}`, {
+    method: 'DELETE',
+  });
+}

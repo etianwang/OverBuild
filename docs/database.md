@@ -146,6 +146,7 @@ npm run db:seed        # 同步种子数据并再次扫描
 | 2026-07-08 | finance | incomes, payments, reimbursements, budgets, costs, invoices, cash_accounts, bank_accounts, account_transactions, currencies, exchange_rates |
 | 2026-07-08 | document | documents, document_versions, document_categories, translation_tasks |
 | 2026-07-08 | drawing | drawings, drawing_versions, drawing_reviews |
+| 2026-07-09 | translation | translation_versions, glossary_terms, entity_translations |
 
 ---
 
