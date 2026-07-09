@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
 import type { ProjectDetail, ProjectTaskItem, updateProjectTask } from '@/lib/api';
 import type { ScheduleColumn } from '@/lib/schedule-columns';
 import {

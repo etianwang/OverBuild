@@ -8,7 +8,8 @@ import {
   DhtmlxGanttChart,
   type DhtmlxGanttChartHandle,
 } from '@/components/project/dhtmlx-gantt-chart';
-import { Button, Card } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   exportProjectTasks,
   getProject,

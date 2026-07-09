@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
-import { Button, Card, Input } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   ApprovalItem,
   approvalStatusLabel,
@@ -170,7 +172,7 @@ export default function ApprovalsPage() {
           {visibleTabs.map((t) => (
             <Button
               key={t.key}
-              variant={tab === t.key ? 'primary' : 'ghost'}
+              variant={tab === t.key ? 'default' : 'ghost'}
               onClick={() => setTab(t.key)}
             >
               {t.label}

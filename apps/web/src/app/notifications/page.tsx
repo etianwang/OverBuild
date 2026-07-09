@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
-import { Button, Card } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   deleteNotification,
   listNotifications,
@@ -47,13 +48,13 @@ export default function NotificationsPage() {
           <h1 className="text-xl font-semibold">通知中心</h1>
           <div className="flex gap-2">
             <Button
-              variant={filter === 'all' ? 'primary' : 'ghost'}
+              variant={filter === 'all' ? 'default' : 'ghost'}
               onClick={() => setFilter('all')}
             >
               全部
             </Button>
             <Button
-              variant={filter === 'unread' ? 'primary' : 'ghost'}
+              variant={filter === 'unread' ? 'default' : 'ghost'}
               onClick={() => setFilter('unread')}
             >
               未读

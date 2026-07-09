@@ -8,7 +8,7 @@ import { useTheme } from 'next-themes';
 import { getNotificationUnreadCount, logout } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
 
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', permission: null },

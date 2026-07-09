@@ -5,7 +5,9 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { AppShell } from '@/components/layout/app-shell';
 import { DhtmlxGanttChart } from '@/components/project/dhtmlx-gantt-chart';
-import { Button, Card, Input } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   addProjectMember,
   createProjectMilestone,

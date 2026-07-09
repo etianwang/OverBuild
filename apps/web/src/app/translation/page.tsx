@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
-import { Button, Card, Input } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   createGlossaryTerm,
   deleteGlossaryTerm,

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
-import { Button, Card, Input } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   createMaterial,
   createMaterialCategory,
@@ -232,7 +234,7 @@ export default function MaterialsPage() {
           ).map(([key, label]) => (
             <Button
               key={key}
-              variant={tab === key ? 'primary' : 'ghost'}
+              variant={tab === key ? 'default' : 'ghost'}
               onClick={() => setTab(key)}
             >
               {label}

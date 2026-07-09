@@ -1,6 +1,7 @@
 'use client';
 
-import { Button, Input } from '@/components/ui/primitives';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ProjectDetail, ProjectTaskItem } from '@/lib/api';
 
 export interface TaskFormValues {

@@ -2,8 +2,41 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+} from 'recharts';
+import {
+  AlertCircle,
+  Bell,
+  ClipboardCheck,
+  FolderKanban,
+  Languages,
+  Package,
+  ShoppingCart,
+  TrendingUp,
+} from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
-import { Card } from '@/components/ui/primitives';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   DashboardOverview,
   getDashboardCostTrend,
@@ -13,8 +46,76 @@ import {
 } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth-store';
 
+const costChartConfig = {
+  amount: {
+    label: '成本',
+    color: 'var(--chart-1)',
+  },
+} satisfies ChartConfig;
+
 function formatMoney(amount: number, currency: string) {
   return `${amount.toLocaleString('zh-CN', { maximumFractionDigits: 0 })} ${currency}`;
+}
+
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+}: {
+  title: string;
+  value: React.ReactNode;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardDescription>{title}</CardDescription>
+        <Icon className="size-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-semibold tracking-tight">{value}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index}>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-4 w-24" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-8 w-16" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[200px] w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} className="h-4 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardPage() {
@@ -64,7 +165,10 @@ export default function DashboardPage() {
     void load();
   }, []);
 
-  const maxCost = Math.max(...costTrend.map((p) => p.amount), 1);
+  const costChartData = costTrend.map((point) => ({
+    month: point.month.slice(5),
+    amount: point.amount,
+  }));
 
   const quickLinks = [
     { href: '/projects', label: '项目', show: hasPermission(user, 'project.read') },
@@ -77,166 +181,186 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <div className="mb-6 flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
           欢迎回来，{user?.name ?? '用户'}
         </p>
       </div>
 
       {error && (
-        <Card className="mb-4 border-destructive/50 bg-destructive/5 p-3 text-sm text-destructive">
-          {error}
-        </Card>
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle />
+          <AlertTitle>加载失败</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {loading ? (
-        <div className="text-muted-foreground">加载中...</div>
+        <DashboardSkeleton />
       ) : (
         <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {sections.has('projects') && (
-              <Card className="p-5">
-                <p className="text-sm text-muted-foreground">进行中项目</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {overview?.projects?.active ?? 0}
-                </p>
-              </Card>
+              <StatCard
+                title="进行中项目"
+                value={overview?.projects?.active ?? 0}
+                icon={FolderKanban}
+              />
             )}
             {sections.has('approvals') && (
-              <Card className="p-5">
-                <p className="text-sm text-muted-foreground">待办审批</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {overview?.todoApprovals ?? 0}
-                </p>
-              </Card>
+              <StatCard
+                title="待办审批"
+                value={overview?.todoApprovals ?? 0}
+                icon={ClipboardCheck}
+              />
             )}
             {sections.has('inventory') && (
-              <Card className="p-5">
-                <p className="text-sm text-muted-foreground">库存预警</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {overview?.inventoryAlerts ?? 0}
-                </p>
-              </Card>
+              <StatCard
+                title="库存预警"
+                value={overview?.inventoryAlerts ?? 0}
+                icon={Package}
+              />
             )}
             {sections.has('notifications') && (
-              <Card className="p-5">
-                <p className="text-sm text-muted-foreground">未读通知</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {overview?.unreadNotifications ?? 0}
-                </p>
-              </Card>
+              <StatCard
+                title="未读通知"
+                value={overview?.unreadNotifications ?? 0}
+                icon={Bell}
+              />
             )}
             {sections.has('finance') && overview?.finance && (
-              <Card className="p-5">
-                <p className="text-sm text-muted-foreground">利润汇总</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {formatMoney(
-                    overview.finance.profit.amount,
-                    overview.finance.profit.currency,
-                  )}
-                </p>
-              </Card>
+              <StatCard
+                title="利润汇总"
+                value={formatMoney(
+                  overview.finance.profit.amount,
+                  overview.finance.profit.currency,
+                )}
+                icon={TrendingUp}
+              />
             )}
             {sections.has('procurement') && overview?.procurement && (
-              <Card className="p-5">
-                <p className="text-sm text-muted-foreground">待审采购</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {overview.procurement.pendingRequests}
-                </p>
-              </Card>
+              <StatCard
+                title="待审采购"
+                value={overview.procurement.pendingRequests}
+                icon={ShoppingCart}
+              />
             )}
             {sections.has('translation') && overview?.translation && (
-              <Card className="p-5">
-                <p className="text-sm text-muted-foreground">待处理翻译</p>
-                <p className="mt-2 text-2xl font-semibold">
-                  {overview.translation.pending}
-                </p>
-              </Card>
+              <StatCard
+                title="待处理翻译"
+                value={overview.translation.pending}
+                icon={Languages}
+              />
             )}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            {sections.has('costTrend') && costTrend.length > 0 && (
-              <Card className="p-5">
-                <h2 className="mb-4 font-medium">成本趋势（近 6 月）</h2>
-                <div className="flex h-40 items-end gap-2">
-                  {costTrend.map((point) => (
-                    <div
-                      key={point.month}
-                      className="flex flex-1 flex-col items-center gap-1"
-                    >
-                      <div
-                        className="w-full rounded-t bg-primary/80 dark:bg-primary/60"
-                        style={{
-                          height: `${Math.max(8, (point.amount / maxCost) * 100)}%`,
-                        }}
-                        title={`${point.month}: ${point.amount}`}
+            {sections.has('costTrend') && costChartData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>成本趋势</CardTitle>
+                  <CardDescription>近 6 个月项目成本</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer
+                    config={costChartConfig}
+                    className="aspect-auto h-[220px] w-full"
+                  >
+                    <BarChart data={costChartData} accessibilityLayer>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="month"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
                       />
-                      <span className="text-[10px] text-muted-foreground">
-                        {point.month.slice(5)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar
+                        dataKey="amount"
+                        fill="var(--color-amount)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
               </Card>
             )}
 
             {sections.has('profitRanking') && profitRanking.length > 0 && (
-              <Card className="p-5">
-                <h2 className="mb-4 font-medium">项目利润排名</h2>
-                <div className="space-y-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>项目利润排名</CardTitle>
+                  <CardDescription>按利润金额 Top 5</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   {profitRanking.map((item, index) => (
-                    <div
-                      key={item.projectName}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span>
-                        {index + 1}. {item.projectName}
-                      </span>
-                      <span className="font-medium text-primary">
-                        {formatMoney(item.profit.amount, item.profit.currency)}
-                      </span>
+                    <div key={item.projectName}>
+                      <div className="flex items-center justify-between gap-3 text-sm">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Badge variant="secondary">{index + 1}</Badge>
+                          <span className="truncate">{item.projectName}</span>
+                        </div>
+                        <span className="shrink-0 font-medium text-primary">
+                          {formatMoney(
+                            item.profit.amount,
+                            item.profit.currency,
+                          )}
+                        </span>
+                      </div>
+                      {index < profitRanking.length - 1 && (
+                        <Separator className="mt-4" />
+                      )}
                     </div>
                   ))}
-                </div>
+                </CardContent>
               </Card>
             )}
 
             {sections.has('inventory') &&
               (overview?.inventoryAlertList?.length ?? 0) > 0 && (
-                <Card className="p-5">
-                  <h2 className="mb-4 font-medium">库存预警明细</h2>
-                  <div className="space-y-2 text-sm">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>库存预警明细</CardTitle>
+                    <CardDescription>低于安全库存的材料</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
                     {overview?.inventoryAlertList?.map((item) => (
-                      <div key={item.id} className="flex justify-between">
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between text-sm"
+                      >
                         <span>
                           {item.code} {item.name}
                         </span>
-                        <span className="text-destructive">
+                        <Badge variant="destructive">
                           {item.stock}/{item.minStock} {item.unit}
-                        </span>
+                        </Badge>
                       </div>
                     ))}
-                  </div>
+                  </CardContent>
                 </Card>
               )}
           </div>
 
           {quickLinks.length > 0 && (
-            <Card className="p-5">
-              <h2 className="mb-3 font-medium">快捷入口</h2>
-              <div className="flex flex-wrap gap-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>快捷入口</CardTitle>
+                <CardDescription>按权限显示的常用模块</CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
                 {quickLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="rounded-lg border border-border px-3 py-2 text-sm hover:bg-accent"
-                  >
-                    {link.label}
+                  <Link key={link.href} href={link.href}>
+                    <Button variant="outline" size="sm">
+                      {link.label}
+                    </Button>
                   </Link>
                 ))}
-              </div>
+              </CardContent>
             </Card>
           )}
         </div>
