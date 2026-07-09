@@ -262,12 +262,13 @@ npm run test:e2e    # E2E 通过
 
 ### 15. Dashboard (dashboard)
 
-- [ ] 读文档：`docs/modules/dashboard.md`
-- [ ] 数据库：无（聚合查询）
-- [ ] API：概览、统计、趋势、排名
-- [ ] 前端：首页仪表盘（按角色展示卡片）
-- [ ] 测试 + 验收 13 项
-- [ ] 完成
+- [x] 读文档：`docs/modules/dashboard.md`
+- [x] 数据库：无（聚合查询）
+- [x] API：概览、统计、趋势、排名
+- [x] 前端：首页仪表盘（按角色展示卡片）
+- [x] 测试：dashboard.service.spec.ts、dashboard.e2e-spec.ts
+- [x] 自动化验收：lint / build / test / test:e2e 全绿
+- [x] 完成
 
 ---
 
@@ -326,9 +327,9 @@ graph TD
 | F | drawing | ✅ 完成 |
 | G | translation | ✅ 完成 |
 | H | notification | ✅ 完成 |
-| I | dashboard | 未开始 |
+| I | dashboard | ✅ 完成 |
 
-**下一步**：**模块 15 dashboard（仪表盘）**
+**下一步**：**后期容器化与部署**（见下方「后期：容器化与部署」）
 
 ---
 

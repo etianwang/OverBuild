@@ -15,6 +15,7 @@ import { DocumentModule } from './modules/document/document.module';
 import { DrawingModule } from './modules/drawing/drawing.module';
 import { TranslationModule } from './modules/translation/translation.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -35,6 +36,7 @@ import { HealthController } from './health.controller';
     DrawingModule,
     TranslationModule,
     NotificationModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
 })

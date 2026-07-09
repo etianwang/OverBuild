@@ -2137,3 +2137,67 @@ export async function deleteNotification(id: string) {
     method: 'DELETE',
   });
 }
+
+// ── Dashboard ──
+
+export interface DashboardOverview {
+  sections: string[];
+  projects?: {
+    planning: number;
+    active: number;
+    suspended: number;
+    completed: number;
+    total: number;
+    activeCount: number;
+  };
+  finance?: {
+    income: { amount: number; currency: string };
+    expense: { amount: number; currency: string };
+    profit: { amount: number; currency: string };
+  };
+  procurement?: { pendingRequests: number; activeOrders: number };
+  inventoryAlerts?: number;
+  inventoryAlertList?: Array<{
+    id: string;
+    code: string;
+    name: string;
+    stock: number;
+    minStock: number;
+    unit: string;
+    gap: number;
+  }>;
+  todoApprovals?: number;
+  unreadNotifications?: number;
+  translation?: { pending: number; total: number };
+  documents?: { total: number };
+  drawings?: { reviewing: number; total: number };
+}
+
+export async function getDashboardOverview() {
+  return apiFetch<DashboardOverview>('/dashboard/overview');
+}
+
+export async function getDashboardCostTrend(params?: {
+  projectId?: string;
+  months?: number;
+}) {
+  const search = new URLSearchParams();
+  if (params?.projectId) search.set('projectId', params.projectId);
+  if (params?.months) search.set('months', String(params.months));
+  const q = search.toString();
+  return apiFetch<{
+    months: number;
+    points: Array<{ month: string; amount: number; currency: string }>;
+  }>(`/dashboard/cost-trend${q ? `?${q}` : ''}`);
+}
+
+export async function getDashboardProfitRanking(limit = 5) {
+  return apiFetch<{
+    list: Array<{
+      projectId: string;
+      projectCode: string;
+      projectName: string;
+      profit: { amount: number; currency: string };
+    }>;
+  }>(`/dashboard/profit-ranking?limit=${limit}`);
+}
