@@ -174,7 +174,7 @@ npm run dev:web   # http://localhost:3000
 适合快速体验完整系统，无需本机启动 Node 开发服务。
 
 ```bash
-git clone <repo-url> OverBuild
+git clone https://github.com/etianwang/OverBuild
 cd OverBuild
 npm install
 cp .env.example .env
@@ -219,7 +219,7 @@ npm run docker:full
 ```bash
 # 建议目录（与宝塔网站目录一致）
 cd /www/wwwroot
-git clone <repo-url> overbuild
+git clone https://github.com/etianwang/OverBuild overbuild
 cd overbuild
 
 cp .env.docker.example .env
